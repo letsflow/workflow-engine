@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { AppModule } from './../src/app.module';
+import request from 'supertest';
+import { AppModule } from '../src/app.module';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication;
@@ -15,10 +15,19 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  describe('GET /info', () => {
+    it('should return the correct info', () => {
+      return request(app.getHttpServer())
+        .get('/info')
+        .expect(200)
+        .expect((res) => {
+          expect(res.body).toEqual({
+            name: '@letsflow/workflow-engine',
+            version: '0.0.0',
+            description: 'LetsFlow workflow engine',
+            env: 'test',
+          });
+        });
+    });
   });
 });

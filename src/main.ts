@@ -4,6 +4,7 @@ import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from './common/config/config.service';
 import bodyParser from 'body-parser';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function swagger(app: INestApplication, config: ConfigService) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -21,14 +22,11 @@ async function swagger(app: INestApplication, config: ConfigService) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    bodyParser: false,
-  });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.disable('x-powered-by');
 
   const config = await app.get<ConfigService>(ConfigService);
   await config.load();
-
-  app.use(bodyParser.json({}), bodyParser.urlencoded({ extended: false }));
 
   app.enableShutdownHooks();
 
