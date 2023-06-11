@@ -18,10 +18,4 @@ export default {
     default: 'mongodb://localhost:27017/letsflow',
     env: 'DB',
   },
-  paths: {
-    scenarios: {
-      default: 'storage/scenarios',
-      env: 'SCENARIO_PATH',
-    },
-  },
 };

@@ -9,7 +9,4 @@ export class ScenarioSummary {
 
   @ApiProperty()
   description: string;
-
-  @ApiProperty()
-  disabled: boolean;
 }
