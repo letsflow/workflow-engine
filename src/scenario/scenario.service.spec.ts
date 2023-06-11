@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID } from 'uuid-mongodb';
 import { ScenarioService, ScenarioDocument } from './scenario.service';
+import { normalize, Scenario, uuid } from '@letsflow/api';
 
 describe('ScenarioService', () => {
   let scenarioService: ScenarioService;
@@ -19,7 +20,7 @@ describe('ScenarioService', () => {
       findOne: jest.fn(),
       find: jest.fn(),
       countDocuments: jest.fn(),
-      insertOne: jest.fn(),
+      replaceOne: jest.fn(),
       updateOne: jest.fn(),
     } as any;
 
@@ -108,16 +109,43 @@ describe('ScenarioService', () => {
 
       expect(scenario).toEqual(mockScenario);
     });
+
+    it('should throw an exception for a non-existing scenario', async () => {
+      const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+
+      jest.spyOn(scenariosCollection, 'findOne').mockResolvedValueOnce(null);
+
+      await expect(scenarioService.get(id)).rejects.toThrowError(new Error(`Scenario not found`));
+    });
   });
 
   describe('store()', () => {
     it('should store a scenario', async () => {
-      jest.spyOn(scenariosCollection, 'insertOne').mockResolvedValueOnce({} as any);
+      const replaceOneMock = jest.spyOn(scenariosCollection, 'replaceOne').mockResolvedValueOnce({} as any);
 
-      const scenario = { title: 'New Scenario', description: 'New Description' };
-      const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+      const scenario: Scenario = {
+        title: 'minimal scenario',
+        actions: {
+          complete: {},
+        },
+        states: {
+          initial: {
+            on: 'complete',
+            goto: '(done)',
+          },
+        },
+      };
+      const normalized = normalize(scenario);
+      const id = uuid(normalized);
 
-      // ... perform the store scenario test
+      const returnedId = await scenarioService.store(scenario);
+
+      expect(returnedId).toBe(id);
+
+      expect(scenariosCollection.replaceOne).toHaveBeenCalled();
+
+      expect(replaceOneMock.mock.calls[0][0]._id.toString()).toEqual(bsonUUID(id).toString());
+      expect(replaceOneMock.mock.calls[0][1]).toEqual({ ...normalized, disabled: false });
     });
   });
 
@@ -126,12 +154,22 @@ describe('ScenarioService', () => {
       const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       const uuid = bsonUUID(id);
 
-      const updateOneMock = jest.spyOn(scenariosCollection, 'updateOne').mockResolvedValueOnce({} as any);
+      const updateOneMock = jest.spyOn(scenariosCollection, 'updateOne').mockResolvedValueOnce({
+        matchedCount: 1,
+      } as any);
 
       await scenarioService.disable(id);
 
       expect(scenariosCollection.updateOne).toHaveBeenCalled();
       expect(updateOneMock.mock.calls[0][0]._id.toString()).toBe(uuid.toString());
+    });
+
+    it('should throw an exception for a non-existing scenario', async () => {
+      const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+
+      jest.spyOn(scenariosCollection, 'updateOne').mockResolvedValueOnce({ matchedCount: 0 } as any);
+
+      await expect(scenarioService.disable(id)).rejects.toThrowError(new Error(`Scenario not found`));
     });
   });
 });

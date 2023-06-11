@@ -29,8 +29,8 @@ export class ScenarioService implements OnModuleInit {
   }
 
   async get(id: string): Promise<ScenarioDocument> {
-    const scenario = this.scenarios.findOne({ _id: bsonUUID(id) });
-    if (!scenario === null) throw new Error('Scenario not found');
+    const scenario = await this.scenarios.findOne({ _id: bsonUUID(id) });
+    if (!scenario) throw new Error('Scenario not found');
 
     return scenario;
   }
@@ -39,11 +39,14 @@ export class ScenarioService implements OnModuleInit {
     const normalized = normalize(scenario);
     const id = uuid(normalized);
 
-    await this.scenarios.insertOne({ ...normalized, _id: bsonUUID(id), disabled: false });
+    await this.scenarios.replaceOne({ _id: bsonUUID(id) }, { ...normalized, disabled: false });
+
     return id;
   }
 
   async disable(id: string): Promise<void> {
-    await this.scenarios.updateOne({ _id: bsonUUID(id) }, { $set: { disabled: true } });
+    const updated = await this.scenarios.updateOne({ _id: bsonUUID(id) }, { $set: { disabled: true } });
+
+    if (updated.matchedCount === 0) throw new Error('Scenario not found');
   }
 }
