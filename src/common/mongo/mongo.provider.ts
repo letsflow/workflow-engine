@@ -1,6 +1,6 @@
 import { Provider } from '@nestjs/common';
 import { MongoClient, Db } from 'mongodb';
-import { ConfigService } from './common/config/config.service';
+import { ConfigService } from '../config/config.service';
 
 export const mongoProvider: Provider = {
   provide: Db,

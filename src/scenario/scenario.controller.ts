@@ -1,5 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, Res, UseInterceptors } from '@nestjs/common';
-import { ApiTags, ApiResponse, ApiOperation, ApiParam, ApiBody, ApiConsumes, ApiProduces } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Post, Req, Res } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiResponse,
+  ApiOperation,
+  ApiParam,
+  ApiBody,
+  ApiConsumes,
+  ApiProduces,
+  ApiHeader,
+} from '@nestjs/swagger';
 import { ScenarioService } from './scenario.service';
 import { ScenarioSummary } from './scenario.dto';
 import { Request, Response } from 'express';
@@ -16,8 +25,8 @@ export class ScenarioController {
   @ApiOperation({ summary: 'Get all scenarios' })
   @ApiResponse({ status: 200, description: 'Success', type: ScenarioSummary, isArray: true })
   @Get()
-  list(): ScenarioSummary[] {
-    return this.service.list();
+  async list(): Promise<ScenarioSummary[]> {
+    return await this.service.list();
   }
 
   private contentNegotiation(req: Request, ext?: string): string | null {
@@ -32,16 +41,19 @@ export class ScenarioController {
   @ApiParam({ name: 'id', description: 'Scenario ID', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json', 'application/x-yaml')
-  @Get(':filename')
-  get(@Param('filename') filename: string, @Req() req: Request, @Res() res: Response): void {
+  @ApiHeader({ name: 'Accept', enum: ['application/json', 'application/yaml'] })
+  @Get('/:id')
+  async get(@Param('id') filename: string, @Req() req: Request, @Res() res: Response): Promise<void> {
     const [id, ext] = filename.split('.');
 
-    if (!this.service.has(id)) {
+    if (!(await this.service.has(id))) {
       res.status(404).send('Scenario not found');
       return;
     }
 
-    const scenario = this.service.get(id);
+    const { _disabled: disabled, ...scenario } = await this.service.get(id);
+
+    if (disabled) res.header('X-Disabled', 'true');
 
     if (this.contentNegotiation(req, ext) === 'application/yaml') {
       res.status(200).header('Content-Type', 'application/yaml').send(yaml.stringify(scenario));
@@ -69,9 +81,14 @@ export class ScenarioController {
   @ApiOperation({ summary: 'Disable a scenario' })
   @ApiParam({ name: 'id', description: 'Scenario ID', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'No Content' })
-  @Delete()
+  @Delete('/:id')
   async disable(@Param('id') id: string, @Res() res: Response): Promise<void> {
+    if (!(await this.service.has(id))) {
+      res.status(404).send('Scenario not found');
+      return;
+    }
+
     await this.service.disable(id);
-    res.status(201).send();
+    res.status(204).send();
   }
 }

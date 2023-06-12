@@ -4,12 +4,12 @@ import { AppService } from './app.service';
 import { ConfigModule } from './common/config/config.module';
 import { ScenarioModule } from './scenario/scenario.module';
 import { YamlBodyParserMiddleware } from './middleware/yamlBodyParser.middleware';
-import { mongoProvider } from './mongo.provider';
+import { MongoModule } from './common/mongo/mongo.module';
 
 @Module({
-  imports: [ConfigModule, ScenarioModule],
+  imports: [ConfigModule, ScenarioModule, MongoModule],
   controllers: [AppController],
-  providers: [AppService, mongoProvider],
+  providers: [AppService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

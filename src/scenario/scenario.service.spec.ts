@@ -20,7 +20,7 @@ describe('ScenarioService', () => {
       findOne: jest.fn(),
       find: jest.fn(),
       countDocuments: jest.fn(),
-      replaceOne: jest.fn(),
+      insertOne: jest.fn(),
       updateOne: jest.fn(),
     } as any;
 
@@ -59,7 +59,7 @@ describe('ScenarioService', () => {
       const scenarioSummaries = await scenarioService.list();
 
       expect(scenariosCollection.find).toHaveBeenCalledWith(
-        { disabled: false },
+        { _disabled: false },
         { sort: { title: 1 }, projection: { _id: 1, title: 1, description: 1 } },
       );
       expect(scenarioSummaries).toEqual([
@@ -79,13 +79,13 @@ describe('ScenarioService', () => {
 
   describe('has()', () => {
     it.each([0, 1])('should check if a scenario exists', async (count) => {
-      const uuid = bsonUUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
+      const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       const countDocumentsMock = jest.spyOn(scenariosCollection, 'countDocuments').mockResolvedValueOnce(count);
 
-      const exists = await scenarioService.has('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
+      const exists = await scenarioService.has(id);
 
       expect(scenariosCollection.countDocuments).toHaveBeenCalled();
-      expect(countDocumentsMock.mock.calls[0][0]._id.toString()).toBe(uuid.toString());
+      expect(countDocumentsMock.mock.calls[0][0]._id.toString()).toBe(id);
 
       expect(exists).toBe(count > 0);
     });
@@ -93,19 +93,19 @@ describe('ScenarioService', () => {
 
   describe('get()', () => {
     it('should retrieve a scenario by ID', async () => {
-      const uuid = bsonUUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
+      const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       const mockScenario = {
-        _id: uuid,
+        _id: bsonUUID(id),
         title: 'Scenario 1',
         description: 'Description 1',
       };
 
       const findOneMock = jest.spyOn(scenariosCollection, 'findOne').mockResolvedValueOnce(mockScenario);
 
-      const scenario = await scenarioService.get('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
+      const scenario = await scenarioService.get(id);
 
       expect(scenariosCollection.findOne).toHaveBeenCalled();
-      expect(findOneMock.mock.calls[0][0]._id.toString()).toBe(uuid.toString());
+      expect(findOneMock.mock.calls[0][0]._id.toString()).toBe(id);
 
       expect(scenario).toEqual(mockScenario);
     });
@@ -120,21 +120,23 @@ describe('ScenarioService', () => {
   });
 
   describe('store()', () => {
-    it('should store a scenario', async () => {
-      const replaceOneMock = jest.spyOn(scenariosCollection, 'replaceOne').mockResolvedValueOnce({} as any);
+    const scenario: Scenario = {
+      title: 'minimal scenario',
+      actions: {
+        complete: {},
+      },
+      states: {
+        initial: {
+          on: 'complete',
+          goto: '(done)',
+        },
+      },
+    };
 
-      const scenario: Scenario = {
-        title: 'minimal scenario',
-        actions: {
-          complete: {},
-        },
-        states: {
-          initial: {
-            on: 'complete',
-            goto: '(done)',
-          },
-        },
-      };
+    it('should store a scenario', async () => {
+      jest.spyOn(scenariosCollection, 'countDocuments').mockResolvedValueOnce(0);
+      const insertOneMock = jest.spyOn(scenariosCollection, 'insertOne').mockResolvedValueOnce({} as any);
+
       const normalized = normalize(scenario);
       const id = uuid(normalized);
 
@@ -142,17 +144,33 @@ describe('ScenarioService', () => {
 
       expect(returnedId).toBe(id);
 
-      expect(scenariosCollection.replaceOne).toHaveBeenCalled();
+      expect(scenariosCollection.insertOne).toHaveBeenCalled();
 
-      expect(replaceOneMock.mock.calls[0][0]._id.toString()).toEqual(bsonUUID(id).toString());
-      expect(replaceOneMock.mock.calls[0][1]).toEqual({ ...normalized, disabled: false });
+      const { _id: insertedId, ...insertedScenario } = insertOneMock.mock.calls[0][0];
+      expect(insertedId.toString()).toEqual(id);
+      expect(insertedScenario).toEqual({ ...normalized, _disabled: false });
+    });
+
+    it('should enable a scenario', async () => {
+      jest.spyOn(scenariosCollection, 'countDocuments').mockResolvedValueOnce(1);
+      const updateOneMock = jest.spyOn(scenariosCollection, 'updateOne').mockResolvedValueOnce({} as any);
+
+      const normalized = normalize(scenario);
+      const id = uuid(normalized);
+
+      const returnedId = await scenarioService.store(scenario);
+
+      expect(returnedId).toBe(id);
+
+      expect(scenariosCollection.updateOne).toHaveBeenCalled();
+      expect(updateOneMock.mock.calls[0][0]._id.toString()).toEqual(bsonUUID(id).toString());
+      expect(updateOneMock.mock.calls[0][1]).toEqual({ $set: { _disabled: false } });
     });
   });
 
   describe('disable()', () => {
     it('should disable a scenario', async () => {
       const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-      const uuid = bsonUUID(id);
 
       const updateOneMock = jest.spyOn(scenariosCollection, 'updateOne').mockResolvedValueOnce({
         matchedCount: 1,
@@ -161,7 +179,7 @@ describe('ScenarioService', () => {
       await scenarioService.disable(id);
 
       expect(scenariosCollection.updateOne).toHaveBeenCalled();
-      expect(updateOneMock.mock.calls[0][0]._id.toString()).toBe(uuid.toString());
+      expect(updateOneMock.mock.calls[0][0]._id.toString()).toBe(id);
     });
 
     it('should throw an exception for a non-existing scenario', async () => {
