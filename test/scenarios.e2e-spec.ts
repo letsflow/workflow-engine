@@ -9,11 +9,13 @@ import { normalize, NormalizedScenario, Scenario, uuid, yaml } from '@letsflow/a
 import { from as bsonUUID } from 'uuid-mongodb';
 import { ScenarioDocument } from '../src/scenario/scenario.service';
 import { ConfigService } from '../src/common/config/config.service';
+import { AuthService } from '../src/common/auth/auth.service';
 
 describe('ScenarioController (e2e)', () => {
   let app: INestApplication;
   let mongo: MongoClient;
   let scenariosCollection: Collection<ScenarioDocument>;
+  let authHeader: { Authorization: string };
 
   function minimalScenario(title: string): Scenario {
     return {
@@ -50,6 +52,11 @@ describe('ScenarioController (e2e)', () => {
     // Connect to the MongoDB test database
     const config = await app.get<ConfigService>(ConfigService);
 
+    // Get an auth token
+    const auth = await app.get<AuthService>(AuthService);
+    const token = auth.devAccount({ id: 'admin', roles: ['admin'] }).token;
+    authHeader = { Authorization: `Bearer ${token}` };
+
     mongo = await MongoClient.connect(config.get('db'));
   });
 
@@ -81,7 +88,7 @@ describe('ScenarioController (e2e)', () => {
 
   describe('GET /scenarios', () => {
     it('should return all scenarios', async () => {
-      const response = await request(app.getHttpServer()).get('/scenarios');
+      const response = await request(app.getHttpServer()).get('/scenarios').set(authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([
@@ -105,7 +112,7 @@ describe('ScenarioController (e2e)', () => {
       const { _id: bsonId, ...expected } = minimalScenarioDocument('New Scenario');
       const id = bsonId.toString();
 
-      const response = await request(app.getHttpServer()).post('/scenarios').send(newScenario);
+      const response = await request(app.getHttpServer()).post('/scenarios').set(authHeader).send(newScenario);
 
       expect(response.status).toBe(201);
       expect(response.headers.location).toEqual(`/scenarios/${id}`);
@@ -119,7 +126,7 @@ describe('ScenarioController (e2e)', () => {
       const { _id: bsonId, ...expected } = minimalScenarioDocument('Test Scenario 3');
       const id = bsonId.toString();
 
-      const response = await request(app.getHttpServer()).post('/scenarios').send(newScenario);
+      const response = await request(app.getHttpServer()).post('/scenarios').set(authHeader).send(newScenario);
 
       expect(response.status).toBe(201);
       expect(response.headers.location).toEqual(`/scenarios/${id}`);
@@ -136,7 +143,7 @@ describe('ScenarioController (e2e)', () => {
       { headers: {}, ext: '.json' },
     ])('should return a scenario as JSON (%o)', async ({ headers, ext }) => {
       const id = minimalScenarioDocument('Test Scenario 1')._id.toString();
-      const response = await request(app.getHttpServer()).get(`/scenarios/${id}${ext}`).set(headers);
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}${ext}`).set(headers).set(authHeader);
 
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
@@ -148,7 +155,7 @@ describe('ScenarioController (e2e)', () => {
       { headers: {}, ext: '.yaml' },
     ])('should return a scenario as YAML (%o)', async ({ headers, ext }) => {
       const id = minimalScenarioDocument('Test Scenario 1')._id.toString();
-      const response = await request(app.getHttpServer()).get(`/scenarios/${id}${ext}`).set(headers);
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}${ext}`).set(headers).set(authHeader);
 
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toBe('application/yaml; charset=utf-8');
@@ -157,21 +164,21 @@ describe('ScenarioController (e2e)', () => {
 
     it('should return a 404 if the scenario does not exist', async () => {
       const id = 'c2800e46-ba36-4fc0-b3e8-c426022f9640';
-      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`);
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`).set(authHeader);
 
       expect(response.status).toBe(404);
     });
 
     it('should return a 404 for an invalid id', async () => {
       const id = 'foo';
-      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`);
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`).set(authHeader);
 
       expect(response.status).toBe(404);
     });
 
     it('should set the X-Disabled header', async () => {
       const id = minimalScenarioDocument('Test Scenario 3')._id.toString();
-      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`);
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`).set(authHeader);
 
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toBe('application/json; charset=utf-8');
@@ -185,7 +192,7 @@ describe('ScenarioController (e2e)', () => {
     it('should disable a scenario', async () => {
       const { _id: bsonId, ...expected } = minimalScenarioDocument('Test Scenario 1', true);
       const id = bsonId.toString();
-      const response = await request(app.getHttpServer()).delete(`/scenarios/${id}`);
+      const response = await request(app.getHttpServer()).delete(`/scenarios/${id}`).set(authHeader);
 
       expect(response.status).toBe(204);
 
@@ -195,14 +202,14 @@ describe('ScenarioController (e2e)', () => {
 
     it('should return a 404 if the scenario does not exist', async () => {
       const id = 'c2800e46-ba36-4fc0-b3e8-c426022f9640';
-      const response = await request(app.getHttpServer()).delete(`/scenarios/${id}`);
+      const response = await request(app.getHttpServer()).delete(`/scenarios/${id}`).set(authHeader);
 
       expect(response.status).toBe(404);
     });
 
     it('should return a 404 for an invalid id', async () => {
       const id = 'foo';
-      const response = await request(app.getHttpServer()).delete(`/scenarios/${id}`);
+      const response = await request(app.getHttpServer()).delete(`/scenarios/${id}`).set(authHeader);
 
       expect(response.status).toBe(404);
     });

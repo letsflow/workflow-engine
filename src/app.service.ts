@@ -9,7 +9,7 @@ export class AppService implements OnModuleInit {
     version: string;
     description: string;
     env: string;
-    accounts?: Array<{ id: string; name: string; access_token: string }>;
+    accounts?: Array<{ id: string; name?: string; roles?: string[]; token: string }>;
   };
 
   constructor(private config: ConfigService, private auth: AuthService) {}

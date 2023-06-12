@@ -20,7 +20,7 @@ export class AppController {
     version: string;
     description: string;
     env: string;
-    accounts?: Array<{ id: string; name: string; access_token: string }>;
+    accounts?: Array<{ id: string; name?: string; roles?: string[]; token: string }>;
   } {
     return this.appService.info;
   }

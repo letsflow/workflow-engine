@@ -4,9 +4,9 @@ import { ConfigService } from '../config/config.service';
 
 interface Account {
   id: string;
-  name: string;
+  name?: string;
   roles?: Array<string>;
-  access_token: string;
+  token: string;
 }
 
 @Injectable()
@@ -16,39 +16,39 @@ export class AuthService implements OnModuleInit {
 
   constructor(private config: ConfigService, private jwt: JwtService) {}
 
-  async onModuleInit() {
+  onModuleInit() {
     if (this.config.get('dev.demoAccounts')) {
-      await this.initDemoAccounts();
+      this.initDemoAccounts();
     }
   }
 
-  private async initDemoAccounts() {
+  private initDemoAccounts() {
     this._demoAccounts = [
       {
         id: 'alice',
         name: 'Alice',
-        access_token: await this.jwt.signAsync({ id: 'alice', name: 'Alice' }),
+        token: this.jwt.sign({ id: 'alice', name: 'Alice' }),
       },
       {
         id: 'bob',
         name: 'Bob',
-        access_token: await this.jwt.signAsync({ id: 'bob', name: 'Bob' }),
+        token: this.jwt.sign({ id: 'bob', name: 'Bob' }),
       },
       {
         id: 'claire',
         name: 'Claire',
-        access_token: await this.jwt.signAsync({ id: 'claire', name: 'Claire' }),
+        token: this.jwt.sign({ id: 'claire', name: 'Claire' }),
       },
       {
         id: 'david',
         name: 'David',
-        access_token: await this.jwt.signAsync({ id: 'david', name: 'David' }),
+        token: this.jwt.sign({ id: 'david', name: 'David' }),
       },
       {
         id: 'admin',
         name: 'Arnold',
         roles: ['admin'],
-        access_token: await this.jwt.signAsync({ id: 'admin', name: 'Arnold', roles: ['admin'] }),
+        token: this.jwt.sign({ id: 'admin', name: 'Arnold', roles: ['admin'] }),
       },
     ];
 
@@ -62,5 +62,9 @@ export class AuthService implements OnModuleInit {
 
   public get defaultAccount(): Account | undefined {
     return this._defaultAccount;
+  }
+
+  public devAccount(account: Omit<Account, 'token'>): Account {
+    return { ...account, token: this.jwt.sign(account) };
   }
 }
