@@ -16,6 +16,7 @@ describe('ScenarioController (e2e)', () => {
   let mongo: MongoClient;
   let scenariosCollection: Collection<ScenarioDocument>;
   let authHeader: { Authorization: string };
+  let userAuthHeader: { Authorization: string };
 
   function minimalScenario(title: string): Scenario {
     return {
@@ -54,8 +55,8 @@ describe('ScenarioController (e2e)', () => {
 
     // Get an auth token
     const auth = await app.get<AuthService>(AuthService);
-    const token = auth.devAccount({ id: 'admin', roles: ['admin'] }).token;
-    authHeader = { Authorization: `Bearer ${token}` };
+    authHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'admin', roles: ['admin'] }).token };
+    userAuthHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'user' }).token };
 
     mongo = await MongoClient.connect(config.get('db'));
   });
@@ -104,6 +105,16 @@ describe('ScenarioController (e2e)', () => {
         },
       ]);
     });
+
+    it('should return a 401 if no auth token is provided', async () => {
+      const response = await request(app.getHttpServer()).get('/scenarios');
+      expect(response.status).toBe(401);
+    });
+
+    it('should return a 403 if the auth token is invalid', async () => {
+      const response = await request(app.getHttpServer()).get('/scenarios').set(userAuthHeader);
+      expect(response.status).toBe(403);
+    });
   });
 
   describe('POST /scenarios', () => {
@@ -133,6 +144,18 @@ describe('ScenarioController (e2e)', () => {
 
       const scenario = await scenariosCollection.findOne({ _id: bsonId }, { projection: { _id: 0 } });
       expect(scenario).toEqual(expected);
+    });
+
+    it('should return a 401 if no auth token is provided', async () => {
+      const newScenario = minimalScenario('Test Scenario 3');
+      const response = await request(app.getHttpServer()).post('/scenarios').send(newScenario);
+      expect(response.status).toBe(401);
+    });
+
+    it('should return a 403 if the auth token is invalid', async () => {
+      const newScenario = minimalScenario('Test Scenario 3');
+      const response = await request(app.getHttpServer()).post('/scenarios').set(userAuthHeader).send(newScenario);
+      expect(response.status).toBe(403);
     });
   });
 
@@ -186,6 +209,18 @@ describe('ScenarioController (e2e)', () => {
 
       expect(response.headers['x-disabled']).toBe('true');
     });
+
+    it('should return a 401 if no auth token is provided', async () => {
+      const id = 'c2800e46-ba36-4fc0-b3e8-c426022f9640';
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`);
+      expect(response.status).toBe(401);
+    });
+
+    it('should return a 403 if the auth token is invalid', async () => {
+      const id = 'c2800e46-ba36-4fc0-b3e8-c426022f9640';
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`).set(userAuthHeader);
+      expect(response.status).toBe(403);
+    });
   });
 
   describe('DELETE /scenarios/:id', () => {
@@ -212,6 +247,18 @@ describe('ScenarioController (e2e)', () => {
       const response = await request(app.getHttpServer()).delete(`/scenarios/${id}`).set(authHeader);
 
       expect(response.status).toBe(404);
+    });
+
+    it('should return a 401 if no auth token is provided', async () => {
+      const id = 'c2800e46-ba36-4fc0-b3e8-c426022f9640';
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`);
+      expect(response.status).toBe(401);
+    });
+
+    it('should return a 403 if the auth token is invalid', async () => {
+      const id = 'c2800e46-ba36-4fc0-b3e8-c426022f9640';
+      const response = await request(app.getHttpServer()).get(`/scenarios/${id}`).set(userAuthHeader);
+      expect(response.status).toBe(403);
     });
   });
 });
