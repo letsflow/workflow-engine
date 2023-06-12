@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiResponse,
@@ -8,17 +8,21 @@ import {
   ApiConsumes,
   ApiProduces,
   ApiHeader,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ScenarioService } from './scenario.service';
 import { ScenarioSummary } from './scenario.dto';
 import { Request, Response } from 'express';
 import { Scenario, validate, yaml } from '@letsflow/api';
 import Negotiator from 'negotiator';
+import { AuthGuard, AdminGuard } from '../common/auth/guards';
 
 //const scenarioSchema = 'https://schemas.letsflow.io/v1.0.0/scenario';
 
+@ApiBearerAuth()
 @ApiTags('Scenario')
 @Controller('scenarios')
+@UseGuards(AuthGuard, AdminGuard)
 export class ScenarioController {
   constructor(private service: ScenarioService) {}
 

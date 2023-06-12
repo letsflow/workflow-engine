@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import * as process from 'process';
 import { ConfigService } from './common/config/config.service';
+import { AuthService } from './common/auth/auth.service';
 
 @Injectable()
 export class AppService implements OnModuleInit {
@@ -9,11 +9,16 @@ export class AppService implements OnModuleInit {
     version: string;
     description: string;
     env: string;
+    accounts?: Array<{ id: string; name: string; access_token: string }>;
   };
 
-  constructor(private config: ConfigService) {}
+  constructor(private config: ConfigService, private auth: AuthService) {}
 
-  onModuleInit(): void {
+  onModuleInit() {
+    this.initInfo();
+  }
+
+  private initInfo() {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const packageInfo = require('../package.json');
 
@@ -22,6 +27,7 @@ export class AppService implements OnModuleInit {
       version: packageInfo.version,
       description: packageInfo.description,
       env: this.config.get('env'),
+      accounts: this.auth.demoAccounts,
     };
   }
 }

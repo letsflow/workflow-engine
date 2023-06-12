@@ -1,1 +1,6 @@
-export default {};
+export default {
+  dev: {
+    demoAccounts: true,
+    defaultAccount: 'admin',
+  },
+};

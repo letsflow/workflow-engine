@@ -1,7 +1,7 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { AppService } from './app.service';
-import { ApiExcludeEndpoint } from '@nestjs/swagger';
+import { ApiExcludeEndpoint, ApiOperation } from '@nestjs/swagger';
 
 @Controller()
 export class AppController {
@@ -13,12 +13,14 @@ export class AppController {
     res.redirect('/api-docs');
   }
 
+  @ApiOperation({ summary: 'Get system information' })
   @Get('/info')
   getInfo(): {
     name: string;
     version: string;
     description: string;
     env: string;
+    accounts?: Array<{ id: string; name: string; access_token: string }>;
   } {
     return this.appService.info;
   }

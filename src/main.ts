@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from './common/config/config.service';
-import bodyParser from 'body-parser';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function swagger(app: INestApplication, config: ConfigService) {
@@ -14,7 +13,7 @@ async function swagger(app: INestApplication, config: ConfigService) {
     .setTitle('LetsFlow')
     .setDescription(description)
     .setVersion(version !== '0.0.0' ? version : config.get('env'))
-    .addBearerAuth()
+    .addBearerAuth({ type: 'http', bearerFormat: 'jwt' })
     .build();
 
   const document = SwaggerModule.createDocument(app, options);

@@ -5,9 +5,10 @@ import { ConfigModule } from './common/config/config.module';
 import { ScenarioModule } from './scenario/scenario.module';
 import { YamlBodyParserMiddleware } from './middleware/yamlBodyParser.middleware';
 import { MongoModule } from './common/mongo/mongo.module';
+import { AuthModule } from './common/auth/auth.module';
 
 @Module({
-  imports: [ConfigModule, ScenarioModule, MongoModule],
+  imports: [ConfigModule, ScenarioModule, MongoModule, AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })
