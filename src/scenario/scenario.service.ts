@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { normalize, uuid, Scenario, NormalizedScenario } from '@letsflow/api';
+import { uuid } from '@letsflow/api';
+import { normalize, Scenario, NormalizedScenario } from '@letsflow/api/scenario';
 import { ScenarioSummary } from './scenario.dto';
 import { Collection, Db } from 'mongodb';
 import { MUUID, from as bsonUUID } from 'uuid-mongodb';
@@ -9,16 +10,16 @@ export type ScenarioDocument = NormalizedScenario & { _id: MUUID; _disabled: boo
 
 @Injectable()
 export class ScenarioService implements OnModuleInit {
-  private scenarios: Collection<ScenarioDocument>;
+  private collection: Collection<ScenarioDocument>;
 
   constructor(private db: Db) {}
 
   async onModuleInit() {
-    this.scenarios = await this.db.collection<ScenarioDocument>('scenarios');
+    this.collection = await this.db.collection<ScenarioDocument>('scenarios');
   }
 
   async list(): Promise<ScenarioSummary[]> {
-    const documents = await this.scenarios
+    const documents = await this.collection
       .find({ _disabled: false }, { sort: { title: 1 }, projection: { _id: 1, title: 1, description: 1 } })
       .toArray();
 
@@ -34,7 +35,7 @@ export class ScenarioService implements OnModuleInit {
   async get(id: string): Promise<NormalizedScenario & { _disabled: boolean }> {
     if (!validateUUID(id)) throw new Error('Invalid scenario ID');
 
-    const scenario = await this.scenarios.findOne({ _id: bsonUUID(id) }, { projection: { _id: 0 } });
+    const scenario = await this.collection.findOne({ _id: bsonUUID(id) }, { projection: { _id: 0 } });
     if (!scenario) throw new Error('Scenario not found');
 
     return scenario;
@@ -46,9 +47,9 @@ export class ScenarioService implements OnModuleInit {
 
     // The scenario has fields that are prefixed with a `$`, so `replaceOne` cannot be used.
     if (await this.has(id)) {
-      await this.scenarios.updateOne({ _id: bsonUUID(id) }, { $set: { _disabled: false } });
+      await this.collection.updateOne({ _id: bsonUUID(id) }, { $set: { _disabled: false } });
     } else {
-      await this.scenarios.insertOne({ ...normalized, _id: bsonUUID(id), _disabled: false });
+      await this.collection.insertOne({ ...normalized, _id: bsonUUID(id), _disabled: false });
     }
 
     return id;
@@ -57,7 +58,7 @@ export class ScenarioService implements OnModuleInit {
   async disable(id: string): Promise<void> {
     if (!validateUUID(id)) throw new Error('Invalid scenario ID');
 
-    const updated = await this.scenarios.updateOne({ _id: bsonUUID(id) }, { $set: { _disabled: true } });
+    const updated = await this.collection.updateOne({ _id: bsonUUID(id) }, { $set: { _disabled: true } });
     if (updated.matchedCount === 0) throw new Error('Scenario not found');
   }
 }

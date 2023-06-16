@@ -2,21 +2,22 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID } from 'uuid-mongodb';
 import { ScenarioService, ScenarioDocument } from './scenario.service';
-import { normalize, Scenario, uuid } from '@letsflow/api';
+import { uuid } from '@letsflow/api';
+import { normalize, Scenario } from '@letsflow/api/scenario';
 
 describe('ScenarioService', () => {
-  let scenarioService: ScenarioService;
+  let service: ScenarioService;
   let db: Db;
-  let scenariosCollection: Collection<ScenarioDocument>;
+  let collection: Collection<ScenarioDocument>;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [ScenarioService, { provide: Db, useValue: { collection: jest.fn() } }],
     }).compile();
 
-    scenarioService = module.get<ScenarioService>(ScenarioService);
+    service = module.get<ScenarioService>(ScenarioService);
     db = module.get<Db>(Db);
-    scenariosCollection = {
+    collection = {
       findOne: jest.fn(),
       find: jest.fn(),
       countDocuments: jest.fn(),
@@ -24,9 +25,9 @@ describe('ScenarioService', () => {
       updateOne: jest.fn(),
     } as any;
 
-    (db.collection as jest.Mock).mockReturnValue(scenariosCollection);
+    (db.collection as jest.Mock).mockReturnValue(collection);
 
-    jest.spyOn(db, 'collection').mockImplementation(() => scenariosCollection as Collection<any>);
+    jest.spyOn(db, 'collection').mockImplementation(() => collection as Collection<any>);
 
     await module.init();
   });
@@ -52,13 +53,11 @@ describe('ScenarioService', () => {
     ];
 
     it('should retrieve a list of scenarios', async () => {
-      jest
-        .spyOn(scenariosCollection, 'find')
-        .mockReturnValue({ toArray: jest.fn().mockResolvedValue(mockScenarios) } as any);
+      jest.spyOn(collection, 'find').mockReturnValue({ toArray: jest.fn().mockResolvedValue(mockScenarios) } as any);
 
-      const scenarioSummaries = await scenarioService.list();
+      const scenarioSummaries = await service.list();
 
-      expect(scenariosCollection.find).toHaveBeenCalledWith(
+      expect(collection.find).toHaveBeenCalledWith(
         { _disabled: false },
         { sort: { title: 1 }, projection: { _id: 1, title: 1, description: 1 } },
       );
@@ -80,11 +79,11 @@ describe('ScenarioService', () => {
   describe('has()', () => {
     it.each([0, 1])('should check if a scenario exists', async (count) => {
       const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-      const countDocumentsMock = jest.spyOn(scenariosCollection, 'countDocuments').mockResolvedValueOnce(count);
+      const countDocumentsMock = jest.spyOn(collection, 'countDocuments').mockResolvedValueOnce(count);
 
-      const exists = await scenarioService.has(id);
+      const exists = await service.has(id);
 
-      expect(scenariosCollection.countDocuments).toHaveBeenCalled();
+      expect(collection.countDocuments).toHaveBeenCalled();
       expect(countDocumentsMock.mock.calls[0][0]._id.toString()).toBe(id);
 
       expect(exists).toBe(count > 0);
@@ -100,11 +99,11 @@ describe('ScenarioService', () => {
         description: 'Description 1',
       };
 
-      const findOneMock = jest.spyOn(scenariosCollection, 'findOne').mockResolvedValueOnce(mockScenario);
+      const findOneMock = jest.spyOn(collection, 'findOne').mockResolvedValueOnce(mockScenario);
 
-      const scenario = await scenarioService.get(id);
+      const scenario = await service.get(id);
 
-      expect(scenariosCollection.findOne).toHaveBeenCalled();
+      expect(collection.findOne).toHaveBeenCalled();
       expect(findOneMock.mock.calls[0][0]._id.toString()).toBe(id);
 
       expect(scenario).toEqual(mockScenario);
@@ -113,9 +112,9 @@ describe('ScenarioService', () => {
     it('should throw an exception for a non-existing scenario', async () => {
       const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
-      jest.spyOn(scenariosCollection, 'findOne').mockResolvedValueOnce(null);
+      jest.spyOn(collection, 'findOne').mockResolvedValueOnce(null);
 
-      await expect(scenarioService.get(id)).rejects.toThrowError(new Error(`Scenario not found`));
+      await expect(service.get(id)).rejects.toThrowError(new Error(`Scenario not found`));
     });
   });
 
@@ -134,17 +133,17 @@ describe('ScenarioService', () => {
     };
 
     it('should store a scenario', async () => {
-      jest.spyOn(scenariosCollection, 'countDocuments').mockResolvedValueOnce(0);
-      const insertOneMock = jest.spyOn(scenariosCollection, 'insertOne').mockResolvedValueOnce({} as any);
+      jest.spyOn(collection, 'countDocuments').mockResolvedValueOnce(0);
+      const insertOneMock = jest.spyOn(collection, 'insertOne').mockResolvedValueOnce({} as any);
 
       const normalized = normalize(scenario);
       const id = uuid(normalized);
 
-      const returnedId = await scenarioService.store(scenario);
+      const returnedId = await service.store(scenario);
 
       expect(returnedId).toBe(id);
 
-      expect(scenariosCollection.insertOne).toHaveBeenCalled();
+      expect(collection.insertOne).toHaveBeenCalled();
 
       const { _id: insertedId, ...insertedScenario } = insertOneMock.mock.calls[0][0];
       expect(insertedId.toString()).toEqual(id);
@@ -152,17 +151,17 @@ describe('ScenarioService', () => {
     });
 
     it('should enable a scenario', async () => {
-      jest.spyOn(scenariosCollection, 'countDocuments').mockResolvedValueOnce(1);
-      const updateOneMock = jest.spyOn(scenariosCollection, 'updateOne').mockResolvedValueOnce({} as any);
+      jest.spyOn(collection, 'countDocuments').mockResolvedValueOnce(1);
+      const updateOneMock = jest.spyOn(collection, 'updateOne').mockResolvedValueOnce({} as any);
 
       const normalized = normalize(scenario);
       const id = uuid(normalized);
 
-      const returnedId = await scenarioService.store(scenario);
+      const returnedId = await service.store(scenario);
 
       expect(returnedId).toBe(id);
 
-      expect(scenariosCollection.updateOne).toHaveBeenCalled();
+      expect(collection.updateOne).toHaveBeenCalled();
       expect(updateOneMock.mock.calls[0][0]._id.toString()).toEqual(bsonUUID(id).toString());
       expect(updateOneMock.mock.calls[0][1]).toEqual({ $set: { _disabled: false } });
     });
@@ -172,22 +171,22 @@ describe('ScenarioService', () => {
     it('should disable a scenario', async () => {
       const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
-      const updateOneMock = jest.spyOn(scenariosCollection, 'updateOne').mockResolvedValueOnce({
+      const updateOneMock = jest.spyOn(collection, 'updateOne').mockResolvedValueOnce({
         matchedCount: 1,
       } as any);
 
-      await scenarioService.disable(id);
+      await service.disable(id);
 
-      expect(scenariosCollection.updateOne).toHaveBeenCalled();
+      expect(collection.updateOne).toHaveBeenCalled();
       expect(updateOneMock.mock.calls[0][0]._id.toString()).toBe(id);
     });
 
     it('should throw an exception for a non-existing scenario', async () => {
       const id = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
-      jest.spyOn(scenariosCollection, 'updateOne').mockResolvedValueOnce({ matchedCount: 0 } as any);
+      jest.spyOn(collection, 'updateOne').mockResolvedValueOnce({ matchedCount: 0 } as any);
 
-      await expect(scenarioService.disable(id)).rejects.toThrowError(new Error(`Scenario not found`));
+      await expect(service.disable(id)).rejects.toThrowError(new Error(`Scenario not found`));
     });
   });
 });

@@ -13,7 +13,8 @@ import {
 import { ScenarioService } from './scenario.service';
 import { ScenarioSummary } from './scenario.dto';
 import { Request, Response } from 'express';
-import { Scenario, validate, yaml } from '@letsflow/api';
+import { yaml } from '@letsflow/api';
+import { Scenario, validate } from '@letsflow/api/scenario';
 import Negotiator from 'negotiator';
 import { AuthGuard, AdminGuard } from '../common/auth/guards';
 

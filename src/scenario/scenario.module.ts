@@ -9,5 +9,6 @@ import { AuthModule } from '../common/auth/auth.module';
   imports: [ConfigModule, AuthModule, MongoModule],
   providers: [ScenarioService],
   controllers: [ScenarioController],
+  exports: [ScenarioService],
 })
 export class ScenarioModule {}

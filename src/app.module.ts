@@ -6,9 +6,11 @@ import { ScenarioModule } from './scenario/scenario.module';
 import { YamlBodyParserMiddleware } from './middleware/yamlBodyParser.middleware';
 import { MongoModule } from './common/mongo/mongo.module';
 import { AuthModule } from './common/auth/auth.module';
+import { ProcessModule } from './process/process.module';
+import { ApikeyModule } from './apikey/apikey.module';
 
 @Module({
-  imports: [ConfigModule, ScenarioModule, MongoModule, AuthModule],
+  imports: [ConfigModule, ScenarioModule, MongoModule, AuthModule, ProcessModule, ApikeyModule],
   controllers: [AppController],
   providers: [AppService],
 })
