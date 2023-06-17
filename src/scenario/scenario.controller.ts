@@ -16,7 +16,7 @@ import { Request, Response } from 'express';
 import { yaml } from '@letsflow/api';
 import { Scenario, validate } from '@letsflow/api/scenario';
 import Negotiator from 'negotiator';
-import { AuthGuard, AdminGuard } from '../common/auth/guards';
+import { AuthGuard, AdminGuard } from '../common/auth';
 
 //const scenarioSchema = 'https://schemas.letsflow.io/v1.0.0/scenario';
 
