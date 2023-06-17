@@ -41,30 +41,30 @@ describe('ProcessService', () => {
   });
 
   describe('start', () => {
+    const scenario = normalize({
+      title: 'minimal scenario',
+      actions: {
+        complete: {},
+      },
+      states: {
+        initial: {
+          on: 'complete',
+          goto: '(done)',
+        },
+      },
+    });
+    const scenarioId = uuid(scenario);
+
+    const instructions: StartInstructions = {
+      scenario: scenarioId,
+      actors: {
+        actor: {
+          id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
+        },
+      },
+    };
+
     it('should start a process', async () => {
-      const scenario = normalize({
-        title: 'minimal scenario',
-        actions: {
-          complete: {},
-        },
-        states: {
-          initial: {
-            on: 'complete',
-            goto: '(done)',
-          },
-        },
-      });
-      const scenarioId = uuid(scenario);
-
-      const instructions: StartInstructions = {
-        scenario: scenarioId,
-        actors: {
-          actor: {
-            id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
-          },
-        },
-      };
-
       jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: false });
       const insertOne = jest.spyOn(collection, 'insertOne').mockResolvedValue({} as any);
 
@@ -114,6 +114,11 @@ describe('ProcessService', () => {
       expect(storedScenario.toString()).toEqual(scenarioId);
       expect(stored).toEqual(expected);
     });
+
+    it('should throw an error if the scenario is disabled', async () => {
+      jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: true });
+      await expect(service.start(instructions)).rejects.toThrowError('Scenario is disabled');
+    });
   });
 
   describe('has', () => {
@@ -128,7 +133,7 @@ describe('ProcessService', () => {
       expect(countDocuments.mock.calls[0][0]._id.toString()).toEqual(processId);
     });
 
-    it('should return false is the process exists', async () => {
+    it("should return false is the process doesn't exist", async () => {
       const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
       const countDocuments = jest.spyOn(collection, 'countDocuments').mockResolvedValue(0);
 
@@ -208,6 +213,16 @@ describe('ProcessService', () => {
 
       expect(scenarios.get).toHaveBeenCalledWith(scenarioId);
       expect(collection.findOne).toHaveBeenCalled();
+      expect(findOne.mock.calls[0][0]._id.toString()).toEqual(processId);
+    });
+
+    it("should throw an error if the process doesn't exist", async () => {
+      const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
+      const findOne = jest.spyOn(collection, 'findOne').mockResolvedValue(null);
+
+      await expect(service.get(processId)).rejects.toThrow('Process not found');
+
+      expect(findOne).toHaveBeenCalled();
       expect(findOne.mock.calls[0][0]._id.toString()).toEqual(processId);
     });
   });

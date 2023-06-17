@@ -33,8 +33,9 @@ export class ProcessService {
 
   async get(id: string): Promise<Process> {
     const processDocument = await this.collection.findOne({ _id: bsonUUID(id) }, { projection: { _id: 0 } });
-    const { _id, scenario: scenarioId, ...rest } = processDocument;
+    if (!processDocument) throw new Error('Process not found');
 
+    const { _id, scenario: scenarioId, ...rest } = processDocument;
     const { _disabled: _ignore, ...scenario } = await this.scenarios.get(scenarioId.toString());
 
     return { id, scenario, ...rest };
