@@ -21,13 +21,13 @@ import { AuthGuard, AdminGuard } from '../common/auth';
 //const scenarioSchema = 'https://schemas.letsflow.io/v1.0.0/scenario';
 
 @ApiBearerAuth()
-@ApiTags('Scenario')
+@ApiTags('scenario')
 @Controller('scenarios')
 @UseGuards(AuthGuard, AdminGuard)
 export class ScenarioController {
   constructor(private service: ScenarioService) {}
 
-  @ApiOperation({ summary: 'Get all scenarios' })
+  @ApiOperation({ summary: 'List scenarios' })
   @ApiResponse({ status: 200, description: 'Success', type: ScenarioSummary, isArray: true })
   @Get()
   async list(): Promise<ScenarioSummary[]> {
@@ -42,7 +42,7 @@ export class ScenarioController {
     return null;
   }
 
-  @ApiOperation({ summary: 'Get scenario by ID' })
+  @ApiOperation({ summary: 'Get a scenario by ID' })
   @ApiParam({ name: 'id', description: 'Scenario ID', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json', 'application/x-yaml')

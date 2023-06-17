@@ -1,6 +1,15 @@
 import { Body, Controller, Param, Post, Res, Headers, UseGuards } from '@nestjs/common';
 import { ProcessService } from './process.service';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiHeader,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { StartInstructions } from './process.dto';
 import { Response } from 'express';
 import { ValidationService } from './validation/validation.service';
@@ -8,7 +17,7 @@ import { AuthGuard, AuthUser } from '../common/auth';
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
-@ApiTags('Process')
+@ApiTags('process')
 @Controller('processes')
 export class ProcessController {
   public constructor(private service: ProcessService, private validation: ValidationService) {}
@@ -33,12 +42,13 @@ export class ProcessController {
   @ApiOperation({ summary: 'Step through a process' })
   @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
   @ApiParam({ name: 'action', description: 'Process action' })
+  @ApiHeader({ name: 'X-Actor', description: 'Actor key', required: false })
   @ApiResponse({ status: 200, description: 'Ok' })
   @Post(':id/:action')
   public async step(
     @Param('id') id: string,
     @Param('action') action: string,
-    @Headers('x-actor') actor: string | undefined,
+    @Headers('X-Actor') actor: string | undefined,
     @AuthUser() user: { id: string },
     @Body() body: any,
     @Res() res: Response,

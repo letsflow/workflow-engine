@@ -4,9 +4,10 @@ import { ProcessController } from './process.controller';
 import { ScenarioModule } from '../scenario/scenario.module';
 import { ValidationService } from './validation/validation.service';
 import { MongoModule } from '../common/mongo/mongo.module';
+import { AuthModule } from '../common/auth/auth.module';
 
 @Module({
-  imports: [ScenarioModule, MongoModule],
+  imports: [ScenarioModule, MongoModule, AuthModule],
   providers: [ProcessService, ValidationService],
   controllers: [ProcessController],
 })

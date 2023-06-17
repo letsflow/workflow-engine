@@ -1,38 +1,41 @@
 import { Body, Controller, Delete, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { ApikeyService } from './apikey.service';
-import { ApiBearerAuth, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiKey, ApiKeySummary } from './apikey.dto';
 import { AdminGuard, AuthGuard } from '../common/auth';
 import { Response } from 'express';
-import { ScenarioSummary } from '../scenario/scenario.dto';
 
 @ApiBearerAuth()
-@ApiTags('ApiKey')
+@ApiTags('API key')
 @Controller('apikey')
 @UseGuards(AuthGuard, AdminGuard)
 export class ApikeyController {
   constructor(private service: ApikeyService) {}
 
-  @Get('/')
+  @ApiOperation({ summary: 'List API keys' })
   @ApiResponse({ status: 200, description: 'Success', type: ApiKeySummary, isArray: true })
+  @Get('/')
   async list(): Promise<ApiKeySummary[]> {
     return await this.service.list();
   }
 
+  @ApiOperation({ summary: 'Get API key details' })
   @ApiParam({ name: 'id' })
-  @Get('/:id')
   @ApiResponse({ status: 200, description: 'Success', type: ApiKey })
+  @Get('/:id')
   async get(@Param('id') id: string): Promise<ApiKey> {
     return await this.service.get(id);
   }
 
-  @Post('/')
+  @ApiOperation({ summary: 'Issue a new API key' })
   @ApiResponse({ status: 201, description: 'Created', type: ApiKey })
+  @Post('/')
   async issue(@Body() input: Partial<ApiKey>, @Res() res: Response) {
     const apiKey = await this.service.issue(input);
     res.status(201).json(apiKey);
   }
 
+  @ApiOperation({ summary: 'Revoke an API key' })
   @ApiParam({ name: 'id' })
   @ApiResponse({ status: 204, description: 'No Content' })
   @Delete('/:id')
