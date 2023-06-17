@@ -1,3 +1,5 @@
+// noinspection DuplicatedCode
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProcessService } from './process.service';
 import { Collection, Db } from 'mongodb';
@@ -6,6 +8,7 @@ import { StartInstructions } from './process.dto';
 import { InstantiateEvent } from '@letsflow/api/process';
 import { normalize } from '@letsflow/api/scenario';
 import { uuid } from '@letsflow/api';
+import { from as bsonUUID } from 'uuid-mongodb';
 
 describe('ProcessService', () => {
   let service: ProcessService;
@@ -37,107 +40,175 @@ describe('ProcessService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should start a process', async () => {
-    const scenario = normalize({
-      title: 'minimal scenario',
-      actions: {
-        complete: {},
-      },
-      states: {
-        initial: {
-          on: 'complete',
-          goto: '(done)',
+  describe('start', () => {
+    it('should start a process', async () => {
+      const scenario = normalize({
+        title: 'minimal scenario',
+        actions: {
+          complete: {},
         },
-      },
-    });
-    const scenarioId = uuid(scenario);
+        states: {
+          initial: {
+            on: 'complete',
+            goto: '(done)',
+          },
+        },
+      });
+      const scenarioId = uuid(scenario);
 
-    const instructions: StartInstructions = {
-      scenario: scenarioId,
-      actors: {
+      const instructions: StartInstructions = {
+        scenario: scenarioId,
+        actors: {
+          actor: {
+            id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
+          },
+        },
+      };
+
+      jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: false });
+      const insertOne = jest.spyOn(collection, 'insertOne').mockResolvedValue({} as any);
+
+      const process = await service.start(instructions);
+
+      expect(process.id).toMatch(
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+      );
+      expect(process.title).toEqual('minimal scenario');
+      expect(process.scenario).toEqual(scenario);
+      expect(process.actors).toEqual({
+        actor: {
+          id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
+          title: 'actor',
+        },
+      });
+      expect(process.response).toBeUndefined();
+
+      expect(process.current.key).toEqual('initial');
+      expect(process.current.actions).toEqual({
+        complete: {
+          $schema: 'https://specs.letsflow.io/v1.0.0/action',
+          actor: ['actor'],
+          description: '',
+          title: 'complete',
+        },
+      });
+      expect(process.current.timestamp).toBeInstanceOf(Date);
+
+      expect(process.events).toHaveLength(1);
+      const event = process.events[0] as InstantiateEvent;
+      expect(event.timestamp).toBeInstanceOf(Date);
+      expect(event.timestamp.toISOString()).toEqual(process.current.timestamp.toISOString());
+      expect(event.actors).toEqual({
         actor: {
           id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
         },
-      },
-    };
+      });
+      expect(event.scenario).toEqual(scenarioId);
+      expect(event.id).toEqual(process.id);
 
-    jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: false });
-    const insertOne = jest.spyOn(collection, 'insertOne').mockResolvedValue({} as any);
+      expect(collection.insertOne).toHaveBeenCalled();
 
-    const process = await service.start(instructions);
-
-    expect(process.id).toMatch(
-      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
-    );
-    expect(process.title).toEqual('minimal scenario');
-    expect(process.scenario).toEqual(scenario);
-    expect(process.actors).toEqual({
-      actor: {
-        id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
-        title: 'actor',
-      },
+      const { id, scenario: _ignore, ...expected } = process;
+      const { _id, scenario: storedScenario, ...stored } = insertOne.mock.calls[0][0];
+      expect(_id.toString()).toEqual(id);
+      expect(storedScenario.toString()).toEqual(scenarioId);
+      expect(stored).toEqual(expected);
     });
-    expect(process.response).toBeUndefined();
-
-    expect(process.current.key).toEqual('initial');
-    expect(process.current.actions).toEqual({
-      complete: {
-        $schema: 'https://specs.letsflow.io/v1.0.0/action',
-        actor: ['actor'],
-        description: '',
-        title: 'complete',
-      },
-    });
-    expect(process.current.timestamp).toBeInstanceOf(Date);
-
-    expect(process.events).toHaveLength(1);
-    const event = process.events[0] as InstantiateEvent;
-    expect(event.timestamp).toBeInstanceOf(Date);
-    expect(event.timestamp.toISOString()).toEqual(process.current.timestamp.toISOString());
-    expect(event.actors).toEqual({
-      actor: {
-        id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
-      },
-    });
-    expect(event.scenario).toEqual(scenarioId);
-    expect(event.id).toEqual(process.id);
-
-    expect(collection.insertOne).toHaveBeenCalled();
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, scenario: _ignore, ...expected } = process;
-    const { _id, scenario: storedScenario, ...stored } = insertOne.mock.calls[0][0];
-    expect(_id.toString()).toEqual(id);
-    expect(storedScenario.toString()).toEqual(scenarioId);
-    expect(stored).toEqual(expected);
   });
 
-  /*
-  it('should return process existence', async () => {
-    const processId = '12345';
+  describe('has', () => {
+    it('should return true is the process exists', async () => {
+      const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
+      const countDocuments = jest.spyOn(collection, 'countDocuments').mockResolvedValue(1);
 
-    jest.spyOn(collection, 'countDocuments').mockResolvedValue(1);
+      const exists = await service.has(processId);
+      expect(exists).toBe(true);
 
-    const exists = await service.has(processId);
+      expect(countDocuments).toHaveBeenCalled();
+      expect(countDocuments.mock.calls[0][0]._id.toString()).toEqual(processId);
+    });
 
-    expect(exists).toBe(true);
+    it('should return false is the process exists', async () => {
+      const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
+      const countDocuments = jest.spyOn(collection, 'countDocuments').mockResolvedValue(0);
+
+      const exists = await service.has(processId);
+      expect(exists).toBe(false);
+
+      expect(countDocuments).toHaveBeenCalled();
+      expect(countDocuments.mock.calls[0][0]._id.toString()).toEqual(processId);
+    });
   });
 
-  it('should return a process', async () => {
-    const processId = '12345';
+  describe('get', () => {
+    it('should return a process', async () => {
+      const scenario = normalize({
+        title: 'minimal scenario',
+        actions: {
+          complete: {},
+        },
+        states: {
+          initial: {
+            on: 'complete',
+            goto: '(done)',
+          },
+        },
+      });
+      const scenarioId = uuid(scenario);
 
-    const processDocument = { /* mock process document data  };
+      const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
+      const processData = {
+        title: 'minimal scenario',
+        actors: {
+          actor: {
+            id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
+            title: 'actor',
+          },
+        },
+        response: {
+          foo: 'bar',
+        },
+        current: {
+          key: 'initial',
+          actions: {
+            complete: {
+              $schema: 'https://specs.letsflow.io/v1.0.0/action',
+              actor: ['actor'],
+              description: '',
+              title: 'complete',
+            },
+          },
+          timestamp: new Date('2020-01-01T00:00:00.000Z'),
+        },
+        events: [
+          {
+            id: processId,
+            scenario: scenarioId,
+            actors: {
+              actor: {
+                id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
+              },
+            },
+            timestamp: new Date('2020-01-01T00:00:00.000Z'),
+          },
+        ],
+        vars: {
+          foo: 'bar',
+          amount: 100,
+        },
+      };
+      const processDocument = { _id: bsonUUID(processId), scenario: scenarioId, ...processData };
 
-    jest.spyOn(collection, 'findOne').mockResolvedValue(processDocument);
+      jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: false });
+      const findOne = jest.spyOn(collection, 'findOne').mockResolvedValue(processDocument);
 
-    const normalizedScenario: NormalizedScenario = { /* mock normalized scenario data  };
+      const process = await service.get(processId);
 
-    jest.spyOn(scenarios, 'get').mockResolvedValue(normalizedScenario);
+      expect(process).toEqual({ id: processId, scenario, ...processData });
 
-    const process = await service.get(processId);
-
-    expect(process).toEqual({ id: processId, scenario: normalizedScenario, ...processDocument });
-  });*/
-
-  // Continue writing tests for other methods as per your requirements.
+      expect(scenarios.get).toHaveBeenCalledWith(scenarioId);
+      expect(collection.findOne).toHaveBeenCalled();
+      expect(findOne.mock.calls[0][0]._id.toString()).toEqual(processId);
+    });
+  });
 });

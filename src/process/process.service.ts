@@ -32,17 +32,15 @@ export class ProcessService {
   }
 
   async get(id: string): Promise<Process> {
-    const { scenario: scenarioId, ...rest } = await this.collection.findOne(
-      { _id: bsonUUID(id) },
-      { projection: { _id: 0 } },
-    );
-    const scenario = await this.scenarios.get(scenarioId.toString());
+    const processDocument = await this.collection.findOne({ _id: bsonUUID(id) }, { projection: { _id: 0 } });
+    const { _id, scenario: scenarioId, ...rest } = processDocument;
+
+    const { _disabled: _ignore, ...scenario } = await this.scenarios.get(scenarioId.toString());
 
     return { id, scenario, ...rest };
   }
 
   async save(process: Process) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, scenario: _ignore, ...rest } = process;
     const instantiateEvent = process.events[0] as InstantiateEvent;
 
