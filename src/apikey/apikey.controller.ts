@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { ApikeyService } from './apikey.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ApiKey, ApiKeySummary } from './apikey.dto';
+import { ApiKey } from './apikey.dto';
 import { AdminGuard, AuthGuard } from '../common/auth';
 import { Response } from 'express';
 
@@ -13,18 +13,10 @@ export class ApikeyController {
   constructor(private service: ApikeyService) {}
 
   @ApiOperation({ summary: 'List API keys' })
-  @ApiResponse({ status: 200, description: 'Success', type: ApiKeySummary, isArray: true })
+  @ApiResponse({ status: 200, description: 'Success', type: ApiKey, isArray: true })
   @Get('/')
-  async list(): Promise<ApiKeySummary[]> {
+  async list(): Promise<ApiKey[]> {
     return await this.service.list();
-  }
-
-  @ApiOperation({ summary: 'Get API key details' })
-  @ApiParam({ name: 'id' })
-  @ApiResponse({ status: 200, description: 'Success', type: ApiKey })
-  @Get('/:id')
-  async get(@Param('id') id: string): Promise<ApiKey> {
-    return await this.service.get(id);
   }
 
   @ApiOperation({ summary: 'Issue a new API key' })

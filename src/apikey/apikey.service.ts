@@ -1,35 +1,27 @@
 import * as crypto from 'crypto';
 import { Injectable } from '@nestjs/common';
-import { encode } from '../util/base62';
-import { ApiKey, ApiKeySummary } from './apikey.dto';
+import { encode } from '../utils/base62';
+import { ApiKey } from './apikey.dto';
 import { Collection, Db, ObjectId, WithId } from 'mongodb';
 import crc32 from 'buffer-crc32';
 
-type ApiKeySummaryDocument = WithId<Omit<ApiKeySummary, 'id'>>;
+type ApiKeyDocument = Omit<ApiKey, 'id' | 'expirationDays' | 'isActive'>;
 
 @Injectable()
 export class ApikeyService {
-  private collection: Collection<ApiKey>;
+  private collection: Collection<ApiKeyDocument>;
 
   constructor(private db: Db) {}
 
   async onModuleInit() {
-    this.collection = await this.db.collection<ApiKey>('apikeys');
+    this.collection = await this.db.collection<ApiKeyDocument>('apikeys');
   }
 
-  async list(): Promise<ApiKeySummary[]> {
-    const projection = {
-      _id: 1,
-      name: 1,
-      description: 1,
-      issued: 1,
-      expiration: 1,
-      lastUsed: 1,
-      revoked: 1,
-    };
+  async list(): Promise<ApiKey[]> {
+    const projection = { token: 0 };
 
-    const docs = await this.collection.find<ApiKeySummaryDocument>({}, { projection });
-    return docs.map(({ _id, ...rest }) => ({ id: _id.toHexString(), ...rest })).toArray();
+    const docs = await this.collection.find<WithId<ApiKeyDocument>>({}, { projection });
+    return docs.map(({ _id, ...rest }) => new ApiKey({ id: _id.toHexString(), ...rest })).toArray();
   }
 
   async issue(input: Partial<ApiKey>): Promise<ApiKey> {
@@ -37,19 +29,21 @@ export class ApikeyService {
 
     const issued = new Date();
 
-    const apiKey = new ApiKey({
+    const apiKey: ApiKeyDocument = {
       token: this.generate(),
       name: input.name,
       description: input.description,
       issued,
-      expiration: input.expiration ?? this.determineExpiration(issued, input.expirationDays),
+      expiration: input.expiration
+        ? new Date(input.expiration)
+        : this.determineExpiration(issued, input.expirationDays),
       privileges: input.privileges ?? [],
-      processes: input.processes,
-    });
+    };
+    if (input.processes) apiKey.processes = input.processes;
 
-    await this.collection.insertOne(apiKey);
+    const result = await this.collection.insertOne(apiKey);
 
-    return apiKey;
+    return new ApiKey({ id: result.insertedId.toHexString(), ...apiKey });
   }
 
   private determineExpiration(issued: Date, days?: number): Date {

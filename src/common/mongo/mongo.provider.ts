@@ -7,7 +7,7 @@ export const mongoProvider: Provider = {
   useFactory: async (config: ConfigService): Promise<Db> => {
     await config.onModuleInit();
 
-    const client = new MongoClient(config.get('db'));
+    const client = new MongoClient(config.get('db'), { connectTimeoutMS: 3000 });
     await client.connect();
 
     return client.db();

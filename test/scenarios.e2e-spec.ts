@@ -5,7 +5,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { Collection, MongoClient } from 'mongodb';
-import { normalize, NormalizedScenario, Scenario, uuid, yaml } from '@letsflow/api';
+import { uuid, yaml } from '@letsflow/api';
+import { normalize, NormalizedScenario, Scenario } from '@letsflow/api/scenario';
 import { from as bsonUUID } from 'uuid-mongodb';
 import { ScenarioDocument } from '../src/scenario/scenario.service';
 import { ConfigService } from '../src/common/config/config.service';
@@ -53,12 +54,14 @@ describe('ScenarioController (e2e)', () => {
     // Connect to the MongoDB test database
     const config = await app.get<ConfigService>(ConfigService);
 
+    mongo = await MongoClient.connect(config.get('db'));
+  });
+
+  beforeAll(async () => {
     // Get an auth token
     const auth = await app.get<AuthService>(AuthService);
     authHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'admin', roles: ['admin'] }).token };
     userAuthHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'user' }).token };
-
-    mongo = await MongoClient.connect(config.get('db'));
   });
 
   afterAll(async () => {

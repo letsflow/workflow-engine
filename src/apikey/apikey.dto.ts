@@ -20,29 +20,6 @@ type privileges =
   | 'process:step'
   | 'process:delete';
 
-export class ApiKeySummary {
-  @ApiProperty()
-  id: string;
-
-  @ApiProperty()
-  name: string;
-
-  @ApiProperty()
-  description: string;
-
-  @ApiProperty()
-  issued: Date;
-
-  @ApiProperty()
-  expiration: Date;
-
-  @ApiProperty()
-  lastUsed: Date;
-
-  @ApiProperty()
-  revoked: Date;
-}
-
 export class ApiKey {
   constructor(data: Partial<ApiKey>) {
     Object.assign(this, data);
