@@ -54,6 +54,10 @@ export class ProcessService {
     await this.collection.insertOne(doc);
   }
 
+  isActor(process: Process, userId: string): boolean {
+    return Object.entries(process.actors).some(([, { id }]) => id === userId);
+  }
+
   determineActor(process: Process, action: string, userId?: string): string | undefined {
     const possibleActors = userId
       ? Object.entries(process.actors)

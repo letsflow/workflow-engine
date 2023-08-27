@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Res, Headers, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Res, Headers, UseGuards } from '@nestjs/common';
 import { ProcessService } from './process.service';
 import {
   ApiBearerAuth,
@@ -7,6 +7,7 @@ import {
   ApiHeader,
   ApiOperation,
   ApiParam,
+  ApiProduces,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -43,7 +44,8 @@ export class ProcessController {
   @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
   @ApiParam({ name: 'action', description: 'Process action' })
   @ApiHeader({ name: 'X-Actor', description: 'Actor key', required: false })
-  @ApiResponse({ status: 200, description: 'Ok' })
+  @ApiBody({ required: true })
+  @ApiResponse({ status: 204, description: 'No Content' })
   @Post(':id/:action')
   public async step(
     @Param('id') id: string,
@@ -68,7 +70,7 @@ export class ProcessController {
     actor ||= this.service.determineActor(process, action, user.id);
 
     if (!this.validation.isAuthorized(process, action, actor)) {
-      res.status(401).send('Unauthorized');
+      res.status(401).send('Not allowed to execute this action');
       return;
     }
 
@@ -78,6 +80,31 @@ export class ProcessController {
       return;
     }
 
-    res.status(201).header('Location', `/processes/${id}`).send();
+    res.status(204).send();
+  }
+
+  @ApiOperation({ summary: 'Get a process by ID' })
+  @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiProduces('application/json')
+  @Get('/:id')
+  public async get(
+    @Param('id') id: string,
+    @AuthUser() user: { id: string; roles: string[] },
+    @Res() res: Response,
+  ): Promise<void> {
+    if (!(await this.service.has(id))) {
+      res.status(404).send('Process not found');
+      return;
+    }
+
+    const process = await this.service.get(id);
+
+    if (!user.roles.includes('admin') && !this.service.isActor(process, user.id)) {
+      res.status(401).send('Unauthorized');
+      return;
+    }
+
+    res.status(200).json(process);
   }
 }
