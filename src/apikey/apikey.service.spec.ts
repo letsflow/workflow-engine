@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApikeyService } from './apikey.service';
-import { Collection, Db, ObjectId } from 'mongodb';
+import { Collection, Db, ObjectId, UpdateFilter, Document } from 'mongodb';
 import { ApiKey } from './apikey.dto';
 
 describe('ApikeyService', () => {
@@ -152,8 +152,13 @@ describe('ApikeyService', () => {
       await service.revoke('123456789012345678901234');
 
       expect(updateOne).toHaveBeenCalled();
-      expect(updateOne.mock.calls[0][0]._id).toEqual(new ObjectId('123456789012345678901234'));
-      expect(updateOne.mock.calls[0][1].$set.revoked).toBeInstanceOf(Date);
+
+      const doc = updateOne.mock.calls[0][0]
+      expect(doc._id).toEqual(new ObjectId('123456789012345678901234'));
+
+      const update: UpdateFilter<Document> = updateOne.mock.calls[0][1];
+      expect(update).toHaveProperty('$set.revoked');
+      expect(update.$set.revoked).toBeInstanceOf(Date);
     });
 
     it('should throw error when revoking a non-existing api key', async () => {
