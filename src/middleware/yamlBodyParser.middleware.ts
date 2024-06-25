@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { yaml } from '@letsflow/api';
+import { yaml } from '@letsflow/core';
 
 @Injectable()
 export class YamlBodyParserMiddleware implements NestMiddleware {

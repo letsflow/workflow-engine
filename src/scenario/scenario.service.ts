@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { uuid } from '@letsflow/api';
-import { normalize, Scenario, NormalizedScenario } from '@letsflow/api/scenario';
+import { uuid } from '@letsflow/core';
+import { normalize, Scenario, NormalizedScenario } from '@letsflow/core/scenario';
 import { ScenarioSummary } from './scenario.dto';
 import { Collection, Db } from 'mongodb';
 import { MUUID, from as bsonUUID } from 'uuid-mongodb';

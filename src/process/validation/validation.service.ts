@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ScenarioService } from '../../scenario/scenario.service';
 import { StartInstructions } from '../process.dto';
-import { ExplicitState, NormalizedScenario } from '@letsflow/api/scenario';
-import { Process } from '@letsflow/api/process';
+import { ExplicitState, NormalizedScenario } from '@letsflow/core/scenario';
+import { Process } from '@letsflow/core/process';
 
 @Injectable()
 export class ValidationService {
@@ -25,6 +25,30 @@ export class ValidationService {
     }
 
     errors.push(...this.validateActors(scenario, instructions));
+    errors.push(...this.validateInitialAction(scenario, instructions));
+
+    return errors;
+  }
+
+  private validateActors(scenario: NormalizedScenario, instructions: StartInstructions): string[] {
+    if (!instructions.actors) {
+      return [];
+    }
+
+    const errors = [];
+    const definedActors = Object.keys(scenario.actors);
+
+    for (const key of Object.keys(instructions.actors)) {
+      if (!this.actorIsDefined(definedActors, key)) {
+        errors.push(`Actor '${key}' not found in scenario`);
+      } else {
+        // TODO: Validate actor using schema
+      }
+    }
+  }
+
+  private validateInitialAction(scenario: NormalizedScenario, instructions: StartInstructions): string[] {
+    const errors = [];
 
     const action = typeof instructions.action === 'object' ? instructions.action.key : instructions.action;
     if (action && !(scenario.states.initial as ExplicitState).actions.includes(action)) {
@@ -34,8 +58,8 @@ export class ValidationService {
     return errors;
   }
 
-  private validateActors(scenario: NormalizedScenario, instructions: StartInstructions): string[] {
-    return [];
+  private actorIsDefined(definedActors: string[], key: string) {
+    return definedActors.includes(key) || definedActors.some((k) => k.endsWith('*') && key.startsWith(k.slice(0, -1)));
   }
 
   isAuthorized(process: Process, action: string, actor?: string): boolean {

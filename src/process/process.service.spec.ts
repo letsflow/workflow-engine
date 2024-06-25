@@ -5,9 +5,9 @@ import { ProcessService } from './process.service';
 import { Collection, Db } from 'mongodb';
 import { ScenarioService } from '../scenario/scenario.service';
 import { StartInstructions } from './process.dto';
-import { InstantiateEvent } from '@letsflow/api/process';
-import { normalize } from '@letsflow/api/scenario';
-import { uuid } from '@letsflow/api';
+import { InstantiateEvent } from '@letsflow/core/process';
+import { normalize } from '@letsflow/core/scenario';
+import { uuid } from '@letsflow/core';
 import { from as bsonUUID } from 'uuid-mongodb';
 
 describe('ProcessService', () => {

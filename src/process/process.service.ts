@@ -3,7 +3,7 @@ import { StartInstructions } from './process.dto';
 import { ScenarioService } from '../scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
 import { MUUID, from as bsonUUID } from 'uuid-mongodb';
-import { instantiate, InstantiateEvent, Process } from '@letsflow/api/process';
+import { instantiate, InstantiateEvent, Process } from '@letsflow/core/process';
 
 type ProcessDocument = Omit<Process, 'id' | 'scenario'> & { _id: MUUID; scenario: MUUID };
 

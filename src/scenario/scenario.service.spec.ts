@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID } from 'uuid-mongodb';
 import { ScenarioService, ScenarioDocument } from './scenario.service';
-import { uuid } from '@letsflow/api';
-import { normalize, Scenario } from '@letsflow/api/scenario';
+import { uuid } from '@letsflow/core';
+import { normalize, Scenario } from '@letsflow/core/scenario';
 
 describe('ScenarioService', () => {
   let service: ScenarioService;
