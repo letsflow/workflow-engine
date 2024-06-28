@@ -37,9 +37,9 @@ describe('ProcessService', () => {
       updateOne: jest.fn(),
     } as any;
     const db = module.get<Db>(Db);
-    db.collection = jest.fn().mockResolvedValue(collection);
+    db.collection = jest.fn().mockReturnValue(collection);
 
-    await service.onModuleInit();
+    service.onModuleInit();
   });
 
   it('should be defined', () => {
@@ -117,8 +117,10 @@ describe('ProcessService', () => {
       expect(collection.replaceOne).toHaveBeenCalled();
 
       const { id, scenario: _ignore, ...expected } = process;
-      const { _id, scenario: storedScenario, ...stored } = replaceOne.mock.calls[0][0];
+      const { _id, scenario: storedScenario, ...stored } = replaceOne.mock.calls[0][1];
+      expect(_id).toBeDefined();
       expect(_id.toString()).toEqual(id);
+      expect(storedScenario).toBeDefined();
       expect(storedScenario.toString()).toEqual(scenarioId);
       expect(stored).toEqual(expected);
     });
