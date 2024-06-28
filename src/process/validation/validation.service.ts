@@ -1,3 +1,4 @@
+import Ajv from 'ajv/dist/2020';
 import { Injectable } from '@nestjs/common';
 import { ScenarioService } from '../../scenario/scenario.service';
 import { StartInstructions } from '../process.dto';
@@ -6,7 +7,10 @@ import { Process } from '@letsflow/core/process';
 
 @Injectable()
 export class ValidationService {
-  constructor(private scenarios: ScenarioService) {}
+  constructor(
+    private ajv: Ajv,
+    private scenarios: ScenarioService,
+  ) {}
 
   public async instantiate(instructions: StartInstructions): Promise<string[]> {
     if (!instructions.scenario) {
@@ -62,11 +66,33 @@ export class ValidationService {
     return definedActors.includes(key) || definedActors.some((k) => k.endsWith('*') && key.startsWith(k.slice(0, -1)));
   }
 
-  isAuthorized(process: Process, action: string, actor?: string): boolean {
-    return actor && process.scenario.actions[action].actor.includes(actor);
+  isAuthorized(process: Process, action: string, actor: string): boolean {
+    const { actor: actors } = process.current.actions.find((a) => a.key === action) ?? { actor: [] as string[] };
+    return actors.includes(actor);
   }
 
-  async step(process: Process, action: string, actor: string): Promise<string[]> {
-    return [];
+  canStep(process: Process, action: string): string[] {
+    const errors = [];
+
+    if (!process.scenario.actions[action]) {
+      errors.push(`Action '${action}' not found in scenario`);
+    }
+
+    if (!process.current.actions.find((a) => a.key === action)) {
+      errors.push(`Action '${action}' not available in state '${process.current.key}'`);
+    }
+
+    return errors;
+  }
+
+  validateResponse(process: Process, action: string, response: any) {
+    const { responseSchema } = process.current.actions.find((a) => a.key === action) ?? { responseSchema: {} };
+
+    if (Object.keys(responseSchema).length === 0) return []; // Fast return when there's no schema
+
+    const validate = this.ajv.compile(responseSchema);
+
+    validate(response);
+    return validate.errors;
   }
 }

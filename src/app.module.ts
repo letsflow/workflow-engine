@@ -8,9 +8,11 @@ import { MongoModule } from './common/mongo/mongo.module';
 import { AuthModule } from './common/auth/auth.module';
 import { ProcessModule } from './process/process.module';
 import { ApikeyModule } from './apikey/apikey.module';
+import { NotifyModule } from './notify/notify.module';
+import { AjvModule } from './common/ajv/ajv.module';
 
 @Module({
-  imports: [ConfigModule, ScenarioModule, MongoModule, AuthModule, ProcessModule, ApikeyModule],
+  imports: [ConfigModule, ScenarioModule, MongoModule, AuthModule, ProcessModule, ApikeyModule, NotifyModule, AjvModule],
   controllers: [AppController],
   providers: [AppService],
 })

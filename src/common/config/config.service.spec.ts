@@ -10,10 +10,14 @@ describe('ConfigService', () => {
     }).compile();
 
     service = module.get<ConfigService>(ConfigService);
-    await service.onModuleInit();
+    service.onModuleInit();
   });
 
   it('should give the correct environment', () => {
     expect(service.get('env')).toBe('test');
+  });
+
+  afterEach(() => {
+    service.onModuleDestroy();
   });
 });

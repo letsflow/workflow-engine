@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { encode } from '../utils/base62';
 import { ApiKey } from './apikey.dto';
 import { Collection, Db, ObjectId, WithId } from 'mongodb';
@@ -8,7 +8,7 @@ import crc32 from 'buffer-crc32';
 type ApiKeyDocument = Omit<ApiKey, 'id' | 'expirationDays' | 'isActive'>;
 
 @Injectable()
-export class ApikeyService {
+export class ApikeyService implements OnModuleInit {
   private collection: Collection<ApiKeyDocument>;
 
   constructor(private db: Db) {}

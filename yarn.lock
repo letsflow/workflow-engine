@@ -5,6 +5,17 @@ __metadata:
   version: 6
   cacheKey: 8
 
+"@aminya/node-gyp-build@npm:4.8.1-aminya.1":
+  version: 4.8.1-aminya.1
+  resolution: "@aminya/node-gyp-build@npm:4.8.1-aminya.1"
+  bin:
+    aminya-node-gyp-build: bin.js
+    aminya-node-gyp-build-optional: optional.js
+    aminya-node-gyp-build-test: build-test.js
+  checksum: 111945183373e122ef838b3d56314bbe9ea49035d3396fbd624139dc4cdadf0fa7232bc4ae3b6fab573b83f338199b7b0626b4792ad32c199cf0e38f8b5e6dd7
+  languageName: node
+  linkType: hard
+
 "@ampproject/remapping@npm:^2.2.0":
   version: 2.2.1
   resolution: "@ampproject/remapping@npm:2.2.1"
@@ -1186,7 +1197,7 @@ __metadata:
 
 "@letsflow/core@file:../core::locator=%40letsflow%2Fworkflow-engine%40workspace%3A.":
   version: 0.0.0
-  resolution: "@letsflow/core@file:../core#../core::hash=745f54&locator=%40letsflow%2Fworkflow-engine%40workspace%3A."
+  resolution: "@letsflow/core@file:../core#../core::hash=1c3c0d&locator=%40letsflow%2Fworkflow-engine%40workspace%3A."
   dependencies:
     "@letsflow/jmespath": ../jmespath/
     "@noble/hashes": ^1.4.0
@@ -1196,14 +1207,14 @@ __metadata:
     set-value: ^4.1.0
     uuid: ^10.0.0
     yaml: ^2.4.5
-  checksum: 3de490a1aa6f3f2b81803c1d8002bc8d308db16e4edaf94cb58c095bbd2249650eee15e130a47093c457a41afaa5f8fcb1c57bb6a0231d7f2625e166e20d863b
+  checksum: 1f957039b00ead08b408aba50b53c11c08df8cb90e24550a37832a33505ba3df97e83c4c00ec93396c1eabbc60ea596d90fea41c90dfa2232283b6ac951ebed3
   languageName: node
   linkType: hard
 
-"@letsflow/jmespath@file:../jmespath/::locator=%40letsflow%2Fcore%40file%3A..%2Fcore%23..%2Fcore%3A%3Ahash%3D745f54%26locator%3D%2540letsflow%252Fworkflow-engine%2540workspace%253A.":
+"@letsflow/jmespath@file:../jmespath/::locator=%40letsflow%2Fcore%40file%3A..%2Fcore%23..%2Fcore%3A%3Ahash%3D1c3c0d%26locator%3D%2540letsflow%252Fworkflow-engine%2540workspace%253A.":
   version: 1.1.3
-  resolution: "@letsflow/jmespath@file:../jmespath/#../jmespath/::hash=6d10bb&locator=%40letsflow%2Fcore%40file%3A..%2Fcore%23..%2Fcore%3A%3Ahash%3D745f54%26locator%3D%2540letsflow%252Fworkflow-engine%2540workspace%253A."
-  checksum: c25293fd9cced5999a2db86b304c2b93e91a4e0657098f2aa564e7c2a233ef06b4359b27b5aca3ce94bedb709a90c845fca6863c38473b054ea4db2868d728b1
+  resolution: "@letsflow/jmespath@file:../jmespath/#../jmespath/::hash=02e8a5&locator=%40letsflow%2Fcore%40file%3A..%2Fcore%23..%2Fcore%3A%3Ahash%3D1c3c0d%26locator%3D%2540letsflow%252Fworkflow-engine%2540workspace%253A."
+  checksum: 1ea9ec4de4ac4adce021915445d73a50658cc46977c1425f841ba65530d4aeac03f365828b9c2b421223505b12a48dd3b2eec506079949b85a2205ff58d3d505
   languageName: node
   linkType: hard
 
@@ -1250,6 +1261,7 @@ __metadata:
     typescript: ^5.5.2
     uuid: ^10.0.0
     uuid-mongodb: ^2.5.5
+    zeromq: ^6.0.0-beta.20
   languageName: unknown
   linkType: soft
 
@@ -3267,7 +3279,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cross-spawn@npm:^7.0.0, cross-spawn@npm:^7.0.2, cross-spawn@npm:^7.0.3":
+"cross-env@npm:^7.0.3":
+  version: 7.0.3
+  resolution: "cross-env@npm:7.0.3"
+  dependencies:
+    cross-spawn: ^7.0.1
+  bin:
+    cross-env: src/bin/cross-env.js
+    cross-env-shell: src/bin/cross-env-shell.js
+  checksum: 26f2f3ea2ab32617f57effb70d329c2070d2f5630adc800985d8b30b56e8bf7f5f439dd3a0358b79cee6f930afc23cf8e23515f17ccfb30092c6b62c6b630a79
+  languageName: node
+  linkType: hard
+
+"cross-spawn@npm:^7.0.0, cross-spawn@npm:^7.0.1, cross-spawn@npm:^7.0.2, cross-spawn@npm:^7.0.3":
   version: 7.0.3
   resolution: "cross-spawn@npm:7.0.3"
   dependencies:
@@ -5962,7 +5986,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimist@npm:^1.2.6":
+"minimist@npm:^1.2.3, minimist@npm:^1.2.6":
   version: 1.2.8
   resolution: "minimist@npm:1.2.8"
   checksum: 75a6d645fb122dad29c06a7597bddea977258957ed88d7a6df59b5cd3fe4a527e253e9bbf2e783e4b73657f9098b96a5fe96ab8a113655d4109108577ecf85b0
@@ -6206,6 +6230,15 @@ __metadata:
   version: 3.1.1
   resolution: "node-abort-controller@npm:3.1.1"
   checksum: 2c340916af9710328b11c0828223fc65ba320e0d082214a211311bf64c2891028e42ef276b9799188c4ada9e6e1c54cf7a0b7c05dd9d59fcdc8cd633304c8047
+  languageName: node
+  linkType: hard
+
+"node-addon-api@npm:^7.1.0":
+  version: 7.1.0
+  resolution: "node-addon-api@npm:7.1.0"
+  dependencies:
+    node-gyp: latest
+  checksum: 26640c8d2ed7e2059e2ed65ee79e2a195306b3f1fc27ad11448943ba91d37767bd717a9a0453cc97e83a1109194dced8336a55f8650000458ef625c0b8b5e3df
   languageName: node
   linkType: hard
 
@@ -7130,7 +7163,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"shelljs@npm:0.8.5":
+"shelljs@npm:0.8.5, shelljs@npm:^0.8.5":
   version: 0.8.5
   resolution: "shelljs@npm:0.8.5"
   dependencies:
@@ -7140,6 +7173,18 @@ __metadata:
   bin:
     shjs: bin/shjs
   checksum: 7babc46f732a98f4c054ec1f048b55b9149b98aa2da32f6cf9844c434b43c6251efebd6eec120937bd0999e13811ebd45efe17410edb3ca938f82f9381302748
+  languageName: node
+  linkType: hard
+
+"shx@npm:^0.3.4":
+  version: 0.3.4
+  resolution: "shx@npm:0.3.4"
+  dependencies:
+    minimist: ^1.2.3
+    shelljs: ^0.8.5
+  bin:
+    shx: lib/cli.js
+  checksum: 0aa168bfddc11e3fe8943cce2e0d2d8514a560bd58cf2b835b4351ba03f46068f7d88286c2627f4b85604e81952154c43746369fb3f0d60df0e3b511f465e5b8
   languageName: node
   linkType: hard
 
@@ -8263,5 +8308,19 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: f77b3d8d00310def622123df93d4ee654fc6a0096182af8bd60679ddcdfb3474c56c6c7190817c84a2785648cdee9d721c0154eb45698c62176c322fb46fc700
+  languageName: node
+  linkType: hard
+
+"zeromq@npm:^6.0.0-beta.20":
+  version: 6.0.0-beta.20
+  resolution: "zeromq@npm:6.0.0-beta.20"
+  dependencies:
+    "@aminya/node-gyp-build": 4.8.1-aminya.1
+    cross-env: ^7.0.3
+    node-addon-api: ^7.1.0
+    node-gyp: latest
+    shelljs: ^0.8.5
+    shx: ^0.3.4
+  checksum: 5bfb17427e93ff7719c314ef0b692a81138e2f21194a423b5a536ab6a736222a84f6a3c614cf145ad0f451c5b92c010327866ee656e5df6c45e405a2daba325d
   languageName: node
   linkType: hard

@@ -14,7 +14,10 @@ export class AuthService implements OnModuleInit {
   private _demoAccounts?: Array<Account>;
   private _defaultAccount?: Account;
 
-  constructor(private config: ConfigService, private jwt: JwtService) {}
+  constructor(
+    private config: ConfigService,
+    private jwt: JwtService,
+  ) {}
 
   onModuleInit() {
     if (this.config.get('dev.demoAccounts')) {

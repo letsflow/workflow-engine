@@ -153,7 +153,7 @@ describe('ApikeyService', () => {
 
       expect(updateOne).toHaveBeenCalled();
 
-      const doc = updateOne.mock.calls[0][0]
+      const doc = updateOne.mock.calls[0][0];
       expect(doc._id).toEqual(new ObjectId('123456789012345678901234'));
 
       const update: UpdateFilter<Document> = updateOne.mock.calls[0][1];

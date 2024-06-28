@@ -9,6 +9,7 @@ import { InstantiateEvent } from '@letsflow/core/process';
 import { normalize } from '@letsflow/core/scenario';
 import { uuid } from '@letsflow/core';
 import { from as bsonUUID } from 'uuid-mongodb';
+import { NotifyService } from '../notify/notify.service';
 
 describe('ProcessService', () => {
   let service: ProcessService;
@@ -17,7 +18,12 @@ describe('ProcessService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ProcessService, ScenarioService, { provide: Db, useValue: { collection: jest.fn() } }],
+      providers: [
+        ProcessService,
+        ScenarioService,
+        { provide: Db, useValue: { collection: jest.fn() } },
+        { provide: NotifyService, useValue: { apply: jest.fn() } },
+      ],
     }).compile();
 
     service = module.get<ProcessService>(ProcessService);
@@ -27,7 +33,7 @@ describe('ProcessService', () => {
       findOne: jest.fn(),
       find: jest.fn(),
       countDocuments: jest.fn(),
-      insertOne: jest.fn(),
+      replaceOne: jest.fn(),
       updateOne: jest.fn(),
     } as any;
     const db = module.get<Db>(Db);
@@ -66,7 +72,7 @@ describe('ProcessService', () => {
 
     it('should start a process', async () => {
       jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: false });
-      const insertOne = jest.spyOn(collection, 'insertOne').mockResolvedValue({} as any);
+      const replaceOne = jest.spyOn(collection, 'replaceOne').mockResolvedValue({} as any);
 
       const process = await service.start(instructions);
 
@@ -84,14 +90,16 @@ describe('ProcessService', () => {
       expect(process.response).toBeUndefined();
 
       expect(process.current.key).toEqual('initial');
-      expect(process.current.actions).toEqual({
-        complete: {
+      expect(process.current.actions).toEqual([
+        {
           $schema: 'https://specs.letsflow.io/v1.0.0/action',
           actor: ['actor'],
           description: '',
           title: 'complete',
+          key: 'complete',
+          responseSchema: {},
         },
-      });
+      ]);
       expect(process.current.timestamp).toBeInstanceOf(Date);
 
       expect(process.events).toHaveLength(1);
@@ -106,10 +114,10 @@ describe('ProcessService', () => {
       expect(event.scenario).toEqual(scenarioId);
       expect(event.id).toEqual(process.id);
 
-      expect(collection.insertOne).toHaveBeenCalled();
+      expect(collection.replaceOne).toHaveBeenCalled();
 
       const { id, scenario: _ignore, ...expected } = process;
-      const { _id, scenario: storedScenario, ...stored } = insertOne.mock.calls[0][0];
+      const { _id, scenario: storedScenario, ...stored } = replaceOne.mock.calls[0][0];
       expect(_id.toString()).toEqual(id);
       expect(storedScenario.toString()).toEqual(scenarioId);
       expect(stored).toEqual(expected);

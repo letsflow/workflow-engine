@@ -38,4 +38,9 @@ export default {
       env: 'DEFAULT_ACCOUNT',
     },
   },
+  notificationMethods: {
+    doc: 'Dictionary of notification methods',
+    format: Object,
+    default: {},
+  },
 };

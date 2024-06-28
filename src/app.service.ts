@@ -12,7 +12,10 @@ export class AppService implements OnModuleInit {
     accounts?: Array<{ id: string; name?: string; roles?: string[]; token: string }>;
   };
 
-  constructor(private config: ConfigService, private auth: AuthService) {}
+  constructor(
+    private config: ConfigService,
+    private auth: AuthService,
+  ) {}
 
   onModuleInit() {
     this.initInfo();

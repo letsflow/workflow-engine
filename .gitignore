@@ -40,3 +40,7 @@ lerna-debug.log*
 
 # Runtime data
 /storage
+
+# Local configuration
+/src/config/local.json
+/src/config/*.local.json

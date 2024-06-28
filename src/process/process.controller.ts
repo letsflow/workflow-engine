@@ -21,7 +21,10 @@ import { AuthGuard, AuthUser } from '../common/auth';
 @ApiTags('process')
 @Controller('processes')
 export class ProcessController {
-  public constructor(private service: ProcessService, private validation: ValidationService) {}
+  public constructor(
+    private service: ProcessService,
+    private validation: ValidationService,
+  ) {}
 
   @ApiOperation({ summary: 'Start a process' })
   @ApiConsumes('application/json')
@@ -69,16 +72,39 @@ export class ProcessController {
 
     actor ||= this.service.determineActor(process, action, user.id);
 
-    if (!this.validation.isAuthorized(process, action, actor)) {
-      res.status(401).send('Not allowed to execute this action');
+    if (!actor) {
+      res.status(403).json({ error: { message: 'Not allowed to access process' } });
       return;
     }
 
-    const errors = await this.validation.step(process, action, actor);
-    if (errors.length > 0) {
-      res.status(400).json(errors);
+    const stepErrors = this.validation.canStep(process, action);
+    if (stepErrors.length > 0) {
+      res.status(400).json({
+        error: {
+          message: 'Unable to step',
+          reason: stepErrors,
+        },
+      });
       return;
     }
+
+    if (!this.validation.isAuthorized(process, action, actor)) {
+      res.status(401).json({ error: { message: 'Not allowed to execute this action' } });
+      return;
+    }
+
+    const respErrors = this.validation.validateResponse(process, action, body);
+    if (respErrors.length > 0) {
+      res.status(400).json({
+        error: {
+          message: 'Invalid response',
+          reason: respErrors,
+        },
+      });
+      return;
+    }
+
+    await this.service.step(process, action, actor, body);
 
     res.status(204).send();
   }
@@ -101,7 +127,7 @@ export class ProcessController {
     const process = await this.service.get(id);
 
     if (!user.roles.includes('admin') && !this.service.isActor(process, user.id)) {
-      res.status(401).send('Unauthorized');
+      res.status(403).send('Not allowed to access process');
       return;
     }
 

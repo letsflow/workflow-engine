@@ -3,7 +3,8 @@ import { StartInstructions } from './process.dto';
 import { ScenarioService } from '../scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
 import { MUUID, from as bsonUUID } from 'uuid-mongodb';
-import { instantiate, InstantiateEvent, Process } from '@letsflow/core/process';
+import { instantiate, step, InstantiateEvent, Process } from '@letsflow/core/process';
+import { NotifyService } from '../notify/notify.service';
 
 type ProcessDocument = Omit<Process, 'id' | 'scenario'> & { _id: MUUID; scenario: MUUID };
 
@@ -11,10 +12,14 @@ type ProcessDocument = Omit<Process, 'id' | 'scenario'> & { _id: MUUID; scenario
 export class ProcessService {
   private collection: Collection<ProcessDocument>;
 
-  constructor(private scenarios: ScenarioService, private db: Db) {}
+  constructor(
+    private scenarios: ScenarioService,
+    private db: Db,
+    private notify: NotifyService,
+  ) {}
 
-  async onModuleInit() {
-    this.collection = await this.db.collection<ProcessDocument>('processes');
+  onModuleInit() {
+    this.collection = this.db.collection<ProcessDocument>('processes');
   }
 
   async start(instructions: StartInstructions): Promise<Process> {
@@ -51,7 +56,7 @@ export class ProcessService {
       ...rest,
     };
 
-    await this.collection.insertOne(doc);
+    await this.collection.replaceOne({ _id: doc._id }, doc, { upsert: true });
   }
 
   isActor(process: Process, userId: string): boolean {
@@ -59,14 +64,29 @@ export class ProcessService {
   }
 
   determineActor(process: Process, action: string, userId?: string): string | undefined {
+    if (!(action in process.current.actions)) {
+      throw new Error(`Unable to determine actor: Action '${action}' is not available in the current state`);
+    }
+
     const possibleActors = userId
       ? Object.entries(process.actors)
           .filter(([, { id }]) => id === userId)
           .map(([key]) => key)
       : Object.keys(process.actors);
 
-    const actors = process.scenario.actions[action].actor.filter((actor) => possibleActors.includes(actor));
+    const actors = process.current.actions[action].actor.filter((actor: string) => possibleActors.includes(actor));
 
     return actors[0];
+  }
+
+  async step(process: Process, action: string, actor: string, response?: any): Promise<void> {
+    if (!(action in process.current.actions)) {
+      throw new Error('Unknown action for this process');
+    }
+
+    const updatedProcess = step(process, action, actor, response);
+    await this.save(updatedProcess);
+
+    await this.notify.invoke(updatedProcess);
   }
 }
