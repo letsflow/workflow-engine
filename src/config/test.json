@@ -1,3 +1,7 @@
 {
-  "db": "mongodb://localhost:27017/letsflow-test"
+  "db": "mongodb://localhost:27017/letsflow-test",
+  "summeryFields": {
+    "scenario": ["extraScenarioField"],
+    "process": ["extraProcessField"]
+  }
 }

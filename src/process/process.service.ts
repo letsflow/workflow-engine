@@ -1,25 +1,93 @@
 import { Injectable } from '@nestjs/common';
-import { StartInstructions } from './process.dto';
+import { ProcessSummary, StartInstructions } from './process.dto';
 import { ScenarioService } from '../scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
 import { MUUID, from as bsonUUID } from 'uuid-mongodb';
-import { instantiate, step, InstantiateEvent, Process } from '@letsflow/core/process';
+import { instantiate, step, Process } from '@letsflow/core/process';
 import { NotifyService } from '../notify/notify.service';
+import { ConfigService } from '../common/config/config.service';
 
 type ProcessDocument = Omit<Process, 'id' | 'scenario'> & { _id: MUUID; scenario: MUUID };
+
+interface ListOptions {
+  sort?: string[];
+  page?: number;
+  limit?: number;
+}
 
 @Injectable()
 export class ProcessService {
   private collection: Collection<ProcessDocument>;
+  private summeryProjection: Record<string, number> = {
+    _id: 1,
+    title: 1,
+    scenario: 1,
+    actors: 1,
+    created: 1,
+    lastUpdated: 1,
+  };
+  private scenarioSummeryProjection: Record<string, number> = { _id: 1, title: 1, description: 1 };
 
   constructor(
     private scenarios: ScenarioService,
     private db: Db,
     private notify: NotifyService,
+    private config: ConfigService,
   ) {}
 
   onModuleInit() {
+    this.summeryProjection = {
+      ...this.summeryProjection,
+      ...Object.fromEntries(this.config.get('summeryFields.process').map((key: string) => [key, 1])),
+    };
+    this.scenarioSummeryProjection = {
+      ...this.scenarioSummeryProjection,
+      ...Object.fromEntries(this.config.get('summeryFields.scenario').map((key: string) => [key, 1])),
+    };
+
     this.collection = this.db.collection<ProcessDocument>('processes');
+  }
+
+  async list({ sort, page, limit }: ListOptions = {}): Promise<ProcessSummary[]> {
+    return await this.collection
+      .aggregate([
+        {
+          $lookup: {
+            from: 'scenarios',
+            localField: 'scenario',
+            foreignField: '_id',
+            as: 'scenario',
+            pipeline: [{ $project: this.scenarioSummeryProjection }],
+          },
+        },
+        {
+          $unwind: '$scenario',
+        },
+        {
+          $addFields: {
+            created: { $arrayElemAt: ['$events.timestamp', 0] },
+            lastUpdated: { $arrayElemAt: ['$events.timestamp', -1] },
+            isFinished: { $eq: [{ $type: '$current.transactions' }, 'missing'] },
+          },
+        },
+        { $project: { ...this.summeryProjection } },
+        { $sort: Object.fromEntries((sort ?? ['title']).map((key) => [key, 1])) },
+        { $skip: (page ?? 0) * (limit ?? 0) },
+        { $limit: limit ?? 0 },
+      ])
+      .map(({ _id, scenario, ...processProps }) => {
+        if (scenario /* Just in case the data is corrupt and the scenario is not found */) {
+          const { _id: scenarioId, ...scenarioProps } = scenario;
+          scenario = { id: scenarioId.toString(), ...scenarioProps };
+        }
+
+        return {
+          id: _id.toString(),
+          scenario,
+          ...processProps,
+        } as ProcessSummary;
+      })
+      .toArray();
   }
 
   async start(instructions: StartInstructions): Promise<Process> {
@@ -43,16 +111,19 @@ export class ProcessService {
     const { _id, scenario: scenarioId, ...rest } = processDocument;
     const { _disabled: _ignore, ...scenario } = await this.scenarios.get(scenarioId.toString());
 
-    return { id, scenario, ...rest };
+    return { id, scenario: { id: scenarioId?.toString(), ...scenario }, ...rest };
   }
 
-  async save(process: Process) {
-    const { id, scenario: _ignore, ...rest } = process;
-    const instantiateEvent = process.events[0] as InstantiateEvent;
+  private async save(process: Process) {
+    const {
+      id,
+      scenario: { id: scenarioId, ..._ },
+      ...rest
+    } = process;
 
     const doc: ProcessDocument = {
       _id: bsonUUID(id),
-      scenario: bsonUUID(instantiateEvent.scenario),
+      scenario: bsonUUID(scenarioId),
       ...rest,
     };
 

@@ -10,14 +10,17 @@ import { normalize } from '@letsflow/core/scenario';
 import { uuid } from '@letsflow/core';
 import { from as bsonUUID } from 'uuid-mongodb';
 import { NotifyService } from '../notify/notify.service';
+import { ConfigModule } from '../common/config/config.module';
 
 describe('ProcessService', () => {
+  let module: TestingModule;
   let service: ProcessService;
   let collection: Collection;
   let scenarios: ScenarioService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
+      imports: [ConfigModule],
       providers: [
         ProcessService,
         ScenarioService,
@@ -32,6 +35,7 @@ describe('ProcessService', () => {
     collection = {
       findOne: jest.fn(),
       find: jest.fn(),
+      aggregate: jest.fn(),
       countDocuments: jest.fn(),
       replaceOne: jest.fn(),
       updateOne: jest.fn(),
@@ -39,11 +43,103 @@ describe('ProcessService', () => {
     const db = module.get<Db>(Db);
     db.collection = jest.fn().mockReturnValue(collection);
 
-    service.onModuleInit();
+    await module.init();
+  });
+
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await module.close();
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('list', () => {
+    const mockProcesses = [
+      {
+        _id: bsonUUID('096a8bc3-61bd-4eb1-8997-9b72058468b8'),
+        title: 'Process 1',
+        scenario: {
+          _id: bsonUUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8'),
+          title: 'Scenario 1',
+          description: 'Description 1',
+        },
+        actors: [
+          {
+            id: 'a001',
+            title: 'actor 1',
+            name: 'Albert',
+          },
+          {
+            id: 'a002',
+            title: 'actor 2',
+            name: 'Betty',
+          },
+        ],
+      },
+      {
+        _id: bsonUUID('107f9982-bf33-4e0b-b627-5b3e0abf551a'),
+        title: 'Process 2',
+        scenario: {
+          _id: bsonUUID('dad815c8-95c8-4f41-bf0d-3d3d41654a22'),
+          title: 'Scenario 2',
+          description: 'Description 2',
+        },
+        actors: [
+          {
+            title: 'actor',
+          },
+        ],
+      },
+    ];
+
+    it('should retrieve a list of processes', async () => {
+      jest.spyOn(collection, 'aggregate').mockReturnValue({
+        map: jest.fn().mockImplementation((fn) => ({ toArray: () => mockProcesses.map(fn) })),
+      } as any);
+
+      const scenarioSummaries = await service.list();
+
+      expect(collection.aggregate).toHaveBeenCalled();
+      expect(scenarioSummaries).toEqual([
+        {
+          id: '096a8bc3-61bd-4eb1-8997-9b72058468b8',
+          title: 'Process 1',
+          scenario: {
+            id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+            title: 'Scenario 1',
+            description: 'Description 1',
+          },
+          actors: [
+            {
+              id: 'a001',
+              title: 'actor 1',
+              name: 'Albert',
+            },
+            {
+              id: 'a002',
+              title: 'actor 2',
+              name: 'Betty',
+            },
+          ],
+        },
+        {
+          id: '107f9982-bf33-4e0b-b627-5b3e0abf551a',
+          title: 'Process 2',
+          scenario: {
+            id: 'dad815c8-95c8-4f41-bf0d-3d3d41654a22',
+            title: 'Scenario 2',
+            description: 'Description 2',
+          },
+          actors: [
+            {
+              title: 'actor',
+            },
+          ],
+        },
+      ]);
+    });
   });
 
   describe('start', () => {
@@ -71,7 +167,7 @@ describe('ProcessService', () => {
     };
 
     it('should start a process', async () => {
-      jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: false });
+      jest.spyOn(scenarios, 'get').mockResolvedValue({ id: scenarioId, ...scenario, _disabled: false });
       const replaceOne = jest.spyOn(collection, 'replaceOne').mockResolvedValue({} as any);
 
       const process = await service.start(instructions);
@@ -80,7 +176,7 @@ describe('ProcessService', () => {
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
       );
       expect(process.title).toEqual('minimal scenario');
-      expect(process.scenario).toEqual(scenario);
+      expect(process.scenario).toEqual({ id: scenarioId, ...scenario });
       expect(process.actors).toEqual({
         actor: {
           id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
@@ -118,16 +214,14 @@ describe('ProcessService', () => {
 
       const { id, scenario: _ignore, ...expected } = process;
       const { _id, scenario: storedScenario, ...stored } = replaceOne.mock.calls[0][1];
-      expect(_id).toBeDefined();
-      expect(_id.toString()).toEqual(id);
-      expect(storedScenario).toBeDefined();
-      expect(storedScenario.toString()).toEqual(scenarioId);
+      expect(_id?.toString()).toEqual(id);
+      expect(storedScenario?.toString()).toEqual(scenarioId);
       expect(stored).toEqual(expected);
     });
 
     it('should throw an error if the scenario is disabled', async () => {
       jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: true });
-      await expect(service.start(instructions)).rejects.toThrowError('Scenario is disabled');
+      await expect(service.start(instructions)).rejects.toThrow('Scenario is disabled');
     });
   });
 
@@ -212,14 +306,14 @@ describe('ProcessService', () => {
           amount: 100,
         },
       };
-      const processDocument = { _id: bsonUUID(processId), scenario: scenarioId, ...processData };
+      const processDocument = { _id: bsonUUID(processId), scenario: bsonUUID(scenarioId), ...processData };
 
       jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: false });
       const findOne = jest.spyOn(collection, 'findOne').mockResolvedValue(processDocument);
 
       const process = await service.get(processId);
 
-      expect(process).toEqual({ id: processId, scenario, ...processData });
+      expect(process).toEqual({ id: processId, scenario: { id: scenarioId, ...scenario }, ...processData });
 
       expect(scenarios.get).toHaveBeenCalledWith(scenarioId);
       expect(collection.findOne).toHaveBeenCalled();

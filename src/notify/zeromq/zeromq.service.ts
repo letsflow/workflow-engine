@@ -1,6 +1,6 @@
-import { Logger, Injectable, OnModuleDestroy } from '@nestjs/common';
-import { NotifyArgs, NotifyProvider } from '../interfaces';
-import { Process } from '@letsflow/core/process';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { NotifyProvider } from '../interfaces';
+import { Process, Notify } from '@letsflow/core/process';
 import { Push } from 'zeromq';
 import { ConfigService } from '../../common/config/config.service';
 import { NotifyMessageService } from '../notify-message/notify-message.service';
@@ -32,13 +32,13 @@ export class ZeromqService implements NotifyProvider, OnModuleDestroy {
     return socket;
   }
 
-  async notify(process: Process, args: NotifyArgs): Promise<void> {
-    if (!args.action) {
+  async notify(process: Process, args: Notify): Promise<void> {
+    if ('action' in args && !args.action) {
       return; // No action to notify
     }
 
-    const settings = this.config.get('notificationMethods')[args.method];
-    if (!settings.address) throw new Error(`ZeroMQ address not configured notification method ${args.method}`);
+    const settings = this.config.get('services')[args.service];
+    if (!settings.address) throw new Error(`ZeroMQ address not configured for service '${args.method}'`);
 
     const message = this.message.create(process, args.action);
     const socket = this.getSocket(settings.address);

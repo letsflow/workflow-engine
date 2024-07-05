@@ -9,4 +9,6 @@ export class ScenarioSummary {
 
   @ApiProperty()
   description: string;
+
+  [key: string]: any;
 }

@@ -4,14 +4,17 @@ import { from as bsonUUID } from 'uuid-mongodb';
 import { ScenarioService, ScenarioDocument } from './scenario.service';
 import { uuid } from '@letsflow/core';
 import { normalize, Scenario } from '@letsflow/core/scenario';
+import { ConfigModule } from '../common/config/config.module';
 
 describe('ScenarioService', () => {
+  let module: TestingModule;
   let service: ScenarioService;
   let db: Db;
   let collection: Collection<ScenarioDocument>;
 
   beforeAll(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
+      imports: [ConfigModule],
       providers: [ScenarioService, { provide: Db, useValue: { collection: jest.fn() } }],
     }).compile();
 
@@ -32,34 +35,35 @@ describe('ScenarioService', () => {
     await module.init();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.clearAllMocks();
+    await module.close();
   });
 
   describe('list()', () => {
     const mockScenarios = [
       {
         _id: bsonUUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8'),
-        $schema: 'https://schemas.letsflow.io/v1.0.0/scenario',
         title: 'Scenario 1',
         description: 'Description 1',
       },
       {
         _id: bsonUUID('dad815c8-95c8-4f41-bf0d-3d3d41654a22'),
-        $schema: 'https://schemas.letsflow.io/v1.0.0/scenario',
         title: 'Scenario 2',
         description: 'Description 2',
       },
     ];
 
     it('should retrieve a list of scenarios', async () => {
-      jest.spyOn(collection, 'find').mockReturnValue({ toArray: jest.fn().mockResolvedValue(mockScenarios) } as any);
+      jest.spyOn(collection, 'find').mockReturnValue({
+        map: jest.fn().mockImplementation((fn) => ({ toArray: () => mockScenarios.map(fn) })),
+      } as any);
 
       const scenarioSummaries = await service.list();
 
       expect(collection.find).toHaveBeenCalledWith(
         { _disabled: false },
-        { sort: { title: 1 }, projection: { _id: 1, title: 1, description: 1 } },
+        { sort: { title: 1 }, projection: { _id: 1, title: 1, description: 1, extraScenarioField: 1 } },
       );
       expect(scenarioSummaries).toEqual([
         {

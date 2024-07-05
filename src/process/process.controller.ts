@@ -26,6 +26,15 @@ export class ProcessController {
     private validation: ValidationService,
   ) {}
 
+  @ApiOperation({ summary: 'List all processes' })
+  @ApiResponse({ status: 200, description: 'Success' })
+  @ApiProduces('application/json')
+  @Get()
+  public async list(@Res() res: Response): Promise<void> {
+    const processes = await this.service.list();
+    res.status(200).json(processes);
+  }
+
   @ApiOperation({ summary: 'Start a process' })
   @ApiConsumes('application/json')
   @ApiBody({ required: true, type: StartInstructions })

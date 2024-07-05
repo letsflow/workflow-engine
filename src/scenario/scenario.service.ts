@@ -5,25 +5,34 @@ import { ScenarioSummary } from './scenario.dto';
 import { Collection, Db } from 'mongodb';
 import { MUUID, from as bsonUUID } from 'uuid-mongodb';
 import { validate as validateUUID } from 'uuid';
+import { ConfigService } from '../common/config/config.service';
 
 export type ScenarioDocument = NormalizedScenario & { _id: MUUID; _disabled: boolean };
 
 @Injectable()
 export class ScenarioService implements OnModuleInit {
   private collection: Collection<ScenarioDocument>;
+  private summeryProjection: Record<string, number> = { _id: 1, title: 1, description: 1 };
 
-  constructor(private db: Db) {}
+  constructor(
+    private db: Db,
+    private config: ConfigService,
+  ) {}
 
-  async onModuleInit() {
-    this.collection = await this.db.collection<ScenarioDocument>('scenarios');
+  onModuleInit() {
+    this.summeryProjection = {
+      ...this.summeryProjection,
+      ...Object.fromEntries(this.config.get('summeryFields.scenario').map((key: string) => [key, 1])),
+    };
+
+    this.collection = this.db.collection<ScenarioDocument>('scenarios');
   }
 
   async list(): Promise<ScenarioSummary[]> {
-    const documents = await this.collection
-      .find({ _disabled: false }, { sort: { title: 1 }, projection: { _id: 1, title: 1, description: 1 } })
+    return await this.collection
+      .find({ _disabled: false }, { sort: { title: 1 }, projection: this.summeryProjection })
+      .map(({ _id, ...rest }) => ({ id: _id.toString(), ...rest }) as ScenarioSummary)
       .toArray();
-
-    return documents.map(({ _id, title, description }) => ({ id: _id.toString(), title, description }));
   }
 
   async has(id: string): Promise<boolean> {

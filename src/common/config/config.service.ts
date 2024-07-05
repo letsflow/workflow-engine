@@ -44,16 +44,16 @@ export class ConfigService implements OnModuleInit, OnModuleDestroy {
       .filter(fs.existsSync);
 
     config.loadFile(configFiles);
-    config.set('notificationMethods', this.loadNotificationMethodsFromEnv(config.get('notificationMethods')));
+    config.set('services', this.loadServicesFromEnv(config.get('services')));
 
     config.validate({ allowed: 'warn' });
 
     this.config = config;
   }
 
-  private loadNotificationMethodsFromEnv(methods: Record<string, Record<string, any>>) {
+  private loadServicesFromEnv(methods: Record<string, Record<string, any>>) {
     Object.keys(process.env).forEach((key) => {
-      if (key.startsWith('NOTIFICATION_')) {
+      if (key.startsWith('SERVICE_')) {
         const [_, id, envProp] = key.split('_', 3);
         const prop = envProp.toLowerCase().replace(/_([a-z])/g, (_, group1) => group1.toUpperCase());
 

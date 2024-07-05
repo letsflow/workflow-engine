@@ -48,6 +48,7 @@
     "@types/negotiator": "^0.6.3",
     "@types/node": "^20.14.8",
     "@types/supertest": "^6.0.2",
+    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.14.1",
     "eslint": "^9.5.0",

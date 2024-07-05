@@ -1,3 +1,12 @@
+import convict from 'convict';
+
+// Define custom format to handle comma-separated lists
+convict.addFormat({
+  name: 'comma-separated-list',
+  validate: () => undefined,
+  coerce: (val) => val.split(',').map((item: string) => item.trim()),
+});
+
 export default {
   env: {
     format: ['production', 'staging', 'development', 'test'],
@@ -17,6 +26,20 @@ export default {
   db: {
     default: 'mongodb://localhost:27017/letsflow',
     env: 'DB',
+  },
+  summeryFields: {
+    scenario: {
+      doc: 'Custom fields of a scenario that should be returned when listing',
+      default: [] as string[],
+      format: 'comma-separated-list',
+      env: 'ADDITIONAL_SCENARIO_SUMMERY_FIELDS',
+    },
+    process: {
+      doc: 'Custom fields of a process that should be returned when listing',
+      default: [] as string[],
+      format: 'comma-separated-list',
+      env: 'ADDITIONAL_PROCESS_SUMMERY_FIELDS',
+    },
   },
   jwt: {
     issuer: {
@@ -38,8 +61,8 @@ export default {
       env: 'DEFAULT_ACCOUNT',
     },
   },
-  notificationMethods: {
-    doc: 'Dictionary of notification methods',
+  services: {
+    doc: 'Dictionary of services and workers',
     format: Object,
     default: {},
   },
