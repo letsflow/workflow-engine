@@ -12,7 +12,7 @@ export type ScenarioDocument = NormalizedScenario & { _id: MUUID; _disabled: boo
 @Injectable()
 export class ScenarioService implements OnModuleInit {
   private collection: Collection<ScenarioDocument>;
-  private summeryProjection: Record<string, number> = { _id: 1, title: 1, description: 1 };
+  private summeryProjection: Record<string, number> = { _id: 1, title: 1, description: 1, tags: 1 };
 
   constructor(
     private db: Db,

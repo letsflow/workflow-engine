@@ -268,6 +268,7 @@ describe('ProcessService', () => {
       const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
       const processData = {
         title: 'minimal scenario',
+        tags: ['important'],
         actors: {
           actor: {
             id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',

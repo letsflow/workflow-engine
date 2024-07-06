@@ -21,6 +21,7 @@ export class ProcessService {
   private summeryProjection: Record<string, number> = {
     _id: 1,
     title: 1,
+    tags: 1,
     scenario: 1,
     actors: 1,
     created: 1,

@@ -14,7 +14,7 @@ import {
 import { StartInstructions } from './process.dto';
 import { Response } from 'express';
 import { ValidationService } from './validation/validation.service';
-import { AuthGuard, AuthUser } from '../common/auth';
+import { Account, AuthGuard, AuthUser } from '../common/auth';
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
@@ -63,7 +63,7 @@ export class ProcessController {
     @Param('id') id: string,
     @Param('action') action: string,
     @Headers('X-Actor') actor: string | undefined,
-    @AuthUser() user: { id: string },
+    @AuthUser() user: Account,
     @Body() body: any,
     @Res() res: Response,
   ): Promise<void> {

@@ -50,6 +50,16 @@ export default {
       default: '',
       env: 'JWT_PUBLIC_KEY',
     },
+    transform: {
+      default: '',
+      env: 'JWT_TRANSFORM',
+    },
+  },
+  auth: {
+    adminRole: {
+      default: 'admin',
+      env: 'AUTH_ADMIN_ROLE',
+    },
   },
   dev: {
     demoAccounts: {
