@@ -1,10 +1,24 @@
 import { Module } from '@nestjs/common';
-import { mongoProvider } from './mongo.provider';
 import { ConfigModule } from '../config/config.module';
+import { Db, MongoClient } from 'mongodb';
+import { ConfigService } from '../config/config.service';
 
 @Module({
   imports: [ConfigModule],
-  providers: [mongoProvider],
-  exports: [mongoProvider],
+  providers: [
+    {
+      provide: Db,
+      useFactory: async (config: ConfigService): Promise<Db> => {
+        config.init();
+
+        const client = new MongoClient(config.get('db'), { connectTimeoutMS: 3000 });
+        await client.connect();
+
+        return client.db();
+      },
+      inject: [ConfigService],
+    },
+  ],
+  exports: [Db],
 })
 export class MongoModule {}

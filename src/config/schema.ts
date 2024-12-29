@@ -1,4 +1,5 @@
 import convict from 'convict';
+import { JwtSignOptions, JwtVerifyOptions } from '@nestjs/jwt';
 
 // Define custom format to handle comma-separated lists
 convict.addFormat({
@@ -27,18 +28,32 @@ export default {
     default: 'mongodb://localhost:27017/letsflow',
     env: 'DB',
   },
-  summeryFields: {
-    scenario: {
+  scenario: {
+    storage: {
+      default: 'fs' as 'fs' | 'db',
+      env: 'SCENARIO_STORAGE',
+    },
+    path: {
+      default: './storage/scenarios',
+      env: 'SCENARIO_PATH',
+    },
+    readOnly: {
+      default: true,
+      env: 'SCENARIO_READONLY',
+    },
+    summeryFields: {
       doc: 'Custom fields of a scenario that should be returned when listing',
       default: [] as string[],
       format: 'comma-separated-list',
-      env: 'ADDITIONAL_SCENARIO_SUMMERY_FIELDS',
+      env: 'SCENARIO_ADDITIONAL_SUMMERY_FIELDS',
     },
-    process: {
+  },
+  process: {
+    summeryFields: {
       doc: 'Custom fields of a process that should be returned when listing',
       default: [] as string[],
       format: 'comma-separated-list',
-      env: 'ADDITIONAL_PROCESS_SUMMERY_FIELDS',
+      env: 'PROCESS_ADDITIONAL_SUMMERY_FIELDS',
     },
   },
   jwt: {
@@ -54,11 +69,14 @@ export default {
       default: '',
       env: 'JWT_TRANSFORM',
     },
-  },
-  auth: {
-    adminRole: {
-      default: 'admin',
-      env: 'AUTH_ADMIN_ROLE',
+    secret: {
+      default: '',
+    },
+    signOptions: {
+      default: {} as JwtSignOptions,
+    },
+    verifyOptions: {
+      default: {} as JwtVerifyOptions,
     },
   },
   dev: {

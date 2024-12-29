@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import convict from 'convict';
 import schema from '../../config/schema';
 import * as fs from 'node:fs';
@@ -22,16 +22,19 @@ export class ConfigService implements OnModuleInit, OnModuleDestroy {
   private reloadInterval: ReturnType<typeof setInterval>;
 
   onModuleInit() {
-    if (!this.config) {
-      this.load();
-    }
-
+    this.init();
     this.reloadInterval ??= setInterval(() => this.load(), this.ttl);
   }
 
   async onModuleDestroy() {
     if (this.reloadInterval) {
       clearInterval(this.reloadInterval);
+    }
+  }
+
+  public init(): void {
+    if (!this.config) {
+      this.load();
     }
   }
 

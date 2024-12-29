@@ -767,13 +767,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/js@npm:^9.6.0":
-  version: 9.6.0
-  resolution: "@eslint/js@npm:9.6.0"
-  checksum: 8d0c1cc81ae9182139a38555a56bd6387b663b45efa5ca642e1e50584926f749a68d497c8a5ca02d55661341a5b689fc7977c65b10191e2a315888ca403b8bcd
-  languageName: node
-  linkType: hard
-
 "@eslint/object-schema@npm:^2.1.4":
   version: 2.1.4
   resolution: "@eslint/object-schema@npm:2.1.4"
@@ -1202,9 +1195,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@letsflow/core@file:../core::locator=%40letsflow%2Fworkflow-engine%40workspace%3A.":
+"@letsflow/core@file:../core::locator=%40letsflow%2Fengine%40workspace%3A.":
   version: 0.0.0
-  resolution: "@letsflow/core@file:../core#../core::hash=000256&locator=%40letsflow%2Fworkflow-engine%40workspace%3A."
+  resolution: "@letsflow/core@file:../core#../core::hash=1467c6&locator=%40letsflow%2Fengine%40workspace%3A."
   dependencies:
     "@letsflow/jmespath": ../jmespath/
     "@noble/hashes": ^1.4.0
@@ -1214,22 +1207,14 @@ __metadata:
     set-value: ^4.1.0
     uuid: ^10.0.0
     yaml: ^2.4.5
-  checksum: 683a774fd9e6918aa5d32b7e71d8b3b928bc54287ea826447ea52ebb6545c44be74e8744f2b142225e669956977611d7069a108c8cbe0a4fd5b6410f81596081
+  checksum: 3b6ea7672676a048c82915264ce1f8b0db0c18abda30df80733f1868cb89ee31b555b3b75d9e0564c0deb813739b22cc6078529a11583b9166b68b5a36f712ac
   languageName: node
   linkType: hard
 
-"@letsflow/jmespath@file:../jmespath/::locator=%40letsflow%2Fcore%40file%3A..%2Fcore%23..%2Fcore%3A%3Ahash%3D000256%26locator%3D%2540letsflow%252Fworkflow-engine%2540workspace%253A.":
-  version: 1.1.3
-  resolution: "@letsflow/jmespath@file:../jmespath/#../jmespath/::hash=02e8a5&locator=%40letsflow%2Fcore%40file%3A..%2Fcore%23..%2Fcore%3A%3Ahash%3D000256%26locator%3D%2540letsflow%252Fworkflow-engine%2540workspace%253A."
-  checksum: 1ea9ec4de4ac4adce021915445d73a50658cc46977c1425f841ba65530d4aeac03f365828b9c2b421223505b12a48dd3b2eec506079949b85a2205ff58d3d505
-  languageName: node
-  linkType: hard
-
-"@letsflow/workflow-engine@workspace:.":
+"@letsflow/engine@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@letsflow/workflow-engine@workspace:."
+  resolution: "@letsflow/engine@workspace:."
   dependencies:
-    "@eslint/js": ^9.6.0
     "@letsflow/core": ../core
     "@nestjs/cli": ^10.3.2
     "@nestjs/common": ^10.3.9
@@ -1273,6 +1258,13 @@ __metadata:
     zeromq: ^6.0.0-beta.20
   languageName: unknown
   linkType: soft
+
+"@letsflow/jmespath@file:../jmespath/::locator=%40letsflow%2Fcore%40file%3A..%2Fcore%23..%2Fcore%3A%3Ahash%3D1467c6%26locator%3D%2540letsflow%252Fengine%2540workspace%253A.":
+  version: 1.1.3
+  resolution: "@letsflow/jmespath@file:../jmespath/#../jmespath/::hash=02e8a5&locator=%40letsflow%2Fcore%40file%3A..%2Fcore%23..%2Fcore%3A%3Ahash%3D1467c6%26locator%3D%2540letsflow%252Fengine%2540workspace%253A."
+  checksum: 1ea9ec4de4ac4adce021915445d73a50658cc46977c1425f841ba65530d4aeac03f365828b9c2b421223505b12a48dd3b2eec506079949b85a2205ff58d3d505
+  languageName: node
+  linkType: hard
 
 "@ljharb/through@npm:^2.3.11":
   version: 2.3.13

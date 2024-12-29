@@ -1,24 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-type privileges =
-  | 'scenario:list'
-  | 'scenario:get'
-  | 'scenario:add'
-  | 'scenario:disable'
-  | 'schema:list'
-  | 'schema:get'
-  | 'schema:add'
-  | 'trigger:list'
-  | 'trigger:get'
-  | 'trigger:add'
-  | 'trigger:delete'
-  | 'apikey:issue'
-  | 'apikey:revoke'
-  | 'process:list'
-  | 'process:get'
-  | 'process:start'
-  | 'process:step'
-  | 'process:delete';
+const privileges = [
+  'scenario:list',
+  'scenario:get',
+  'scenario:store',
+  'scenario:disable',
+  'apikey:issue',
+  'apikey:revoke',
+  'process:list',
+  'process:get',
+  'process:start',
+  'process:step',
+] as const;
+
+type Privilege = (typeof privileges)[number];
 
 export class ApiKey {
   constructor(data: Partial<ApiKey>) {
@@ -52,8 +47,12 @@ export class ApiKey {
   @ApiProperty({ readOnly: true })
   revoked?: Date;
 
-  @ApiProperty()
-  privileges: Array<privileges>;
+  @ApiProperty({
+    enum: privileges,
+    type: 'array',
+    items: { type: 'string' },
+  })
+  privileges: Array<Privilege>;
 
   @ApiProperty({
     type: 'array',
@@ -81,4 +80,42 @@ export class ApiKey {
   isActive(): boolean {
     return !this.revoked && (!this.expiration || this.expiration > new Date());
   }
+}
+
+export class IssueApiKeyDto {
+  @ApiProperty({ required: true })
+  name: string;
+
+  @ApiProperty()
+  description: string = '';
+
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'string', enum: privileges as any },
+    required: true,
+  })
+  privileges: Array<Privilege>;
+
+  @ApiProperty({
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        scenario: { type: 'string', format: 'uuid' },
+        actors: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        actions: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+      },
+    },
+  })
+  processes?: Array<{
+    scenario: string;
+    actors?: string[];
+    actions?: string[];
+  }>;
 }

@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ProcessSummary, StartInstructions } from './process.dto';
 import { ScenarioService } from '../scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
-import { MUUID, from as bsonUUID } from 'uuid-mongodb';
-import { instantiate, step, Process } from '@letsflow/core/process';
+import { from as bsonUUID, MUUID } from 'uuid-mongodb';
+import { instantiate, Process, step } from '@letsflow/core/process';
 import { NotifyService } from '../notify/notify.service';
 import { ConfigService } from '../common/config/config.service';
 
@@ -39,11 +39,11 @@ export class ProcessService {
   onModuleInit() {
     this.summeryProjection = {
       ...this.summeryProjection,
-      ...Object.fromEntries(this.config.get('summeryFields.process').map((key: string) => [key, 1])),
+      ...Object.fromEntries(this.config.get('process.summeryFields').map((key: string) => [key, 1])),
     };
     this.scenarioSummeryProjection = {
       ...this.scenarioSummeryProjection,
-      ...Object.fromEntries(this.config.get('summeryFields.scenario').map((key: string) => [key, 1])),
+      ...Object.fromEntries(this.config.get('scenario.summeryFields').map((key: string) => [key, 1])),
     };
 
     this.collection = this.db.collection<ProcessDocument>('processes');

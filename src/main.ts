@@ -24,8 +24,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.disable('x-powered-by');
 
-  const config = await app.get<ConfigService>(ConfigService);
-  await config.load();
+  const config = app.get<ConfigService>(ConfigService);
+  config.init();
 
   app.enableShutdownHooks();
 
@@ -33,4 +33,4 @@ async function bootstrap() {
   await app.listen(process.env.PORT || 3000);
 }
 
-bootstrap();
+bootstrap().then();

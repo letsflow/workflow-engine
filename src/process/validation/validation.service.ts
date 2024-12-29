@@ -5,6 +5,7 @@ import { StartInstructions } from '../process.dto';
 import { ExplicitState, NormalizedScenario } from '@letsflow/core/scenario';
 import { Process } from '@letsflow/core/process';
 
+// TODO: Move to core
 @Injectable()
 export class ValidationService {
   constructor(

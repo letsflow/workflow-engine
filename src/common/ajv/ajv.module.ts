@@ -1,8 +1,13 @@
 import { Module } from '@nestjs/common';
-import { ajvProvider } from './ajv.provider';
+import Ajv from 'ajv/dist/2020';
 
 @Module({
-  providers: [ajvProvider],
-  exports: [ajvProvider],
+  providers: [
+    {
+      provide: Ajv,
+      useValue: new Ajv(),
+    },
+  ],
+  exports: [Ajv],
 })
 export class AjvModule {}

@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { encode } from '../utils/base62';
+import { encode } from '../common/utils/base62';
 import { ApiKey } from './apikey.dto';
 import { Collection, Db, ObjectId, WithId } from 'mongodb';
 import crc32 from 'buffer-crc32';
@@ -8,20 +8,20 @@ import crc32 from 'buffer-crc32';
 type ApiKeyDocument = Omit<ApiKey, 'id' | 'expirationDays' | 'isActive'>;
 
 @Injectable()
-export class ApikeyService implements OnModuleInit {
+export class ApiKeyService implements OnModuleInit {
   private collection: Collection<ApiKeyDocument>;
 
   constructor(private db: Db) {}
 
-  async onModuleInit() {
-    this.collection = await this.db.collection<ApiKeyDocument>('apikeys');
+  onModuleInit() {
+    this.collection = this.db.collection<ApiKeyDocument>('apikeys');
   }
 
   async list(): Promise<ApiKey[]> {
     const projection = { token: 0 };
 
-    const docs = await this.collection.find<WithId<ApiKeyDocument>>({}, { projection });
-    return docs.map(({ _id, ...rest }) => new ApiKey({ id: _id.toHexString(), ...rest })).toArray();
+    const docs = this.collection.find<WithId<ApiKeyDocument>>({}, { projection });
+    return await docs.map(({ _id, ...rest }) => new ApiKey({ id: _id.toHexString(), ...rest })).toArray();
   }
 
   async issue(input: Partial<ApiKey>): Promise<ApiKey> {
@@ -70,10 +70,6 @@ export class ApikeyService implements OnModuleInit {
     if (result.matchedCount === 0) {
       throw new Error("API Key doesn't exist");
     }
-  }
-
-  async used(token: string) {
-    await this.collection.updateOne({ token }, { $set: { lastUsed: new Date() } });
   }
 
   private generate(): string {

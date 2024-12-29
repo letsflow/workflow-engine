@@ -1,31 +1,34 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '../config/config.service';
-import { Account } from './interfaces';
+import { Account } from './account.interface';
 import jmespath from '@letsflow/jmespath';
+import { ApiKey } from '../../apikey';
+import { Collection, Db } from 'mongodb';
+
+type ApiKeyDocument = Omit<ApiKey, 'id' | 'expirationDays' | 'isActive'>;
 
 @Injectable()
 export class AuthService implements OnModuleInit {
   private _demoAccounts?: Array<Account>;
   private _defaultAccount?: Account;
   private transform?: string;
+  private apiKeys: Collection<ApiKeyDocument>;
 
   constructor(
-    private logger: Logger,
-    private config: ConfigService,
-    private jwt: JwtService,
+    private readonly logger: Logger,
+    private readonly config: ConfigService,
+    private readonly jwt: JwtService,
+    private readonly db: Db,
   ) {}
 
   onModuleInit() {
     this.transform = this.config.get('jwt.transform');
+    this.apiKeys = this.db.collection<ApiKeyDocument>('apikeys');
 
     if (this.config.get('dev.demoAccounts')) {
       this.initDemoAccounts();
     }
-  }
-
-  public get adminRole(): string {
-    return this.config.get('auth.adminRole');
   }
 
   private initDemoAccounts() {
@@ -74,15 +77,23 @@ export class AuthService implements OnModuleInit {
     return this._defaultAccount;
   }
 
-  public devAccount(account: Omit<Account, 'token'>): Account {
+  public devAccount(account: Omit<Account, 'token'>): Account | null {
     return { ...account, token: this.jwt.sign(account) };
   }
 
-  public jwtToAccount(token: string): Account {
-    let account = this.jwt.decode(token);
+  public verifyJWT(token: string): Account {
+    let account: any;
+
+    try {
+      account = this.jwt.verify(token);
+    } catch {
+      return null;
+    }
+
     if (this.transform) {
       account = jmespath.search(account, this.transform);
     }
+
     account.token = token;
 
     if (!('id' in account)) {
@@ -91,5 +102,20 @@ export class AuthService implements OnModuleInit {
     }
 
     return account as Account;
+  }
+
+  async verifyApiKey(token: string): Promise<Pick<ApiKey, 'privileges' | 'processes'> | null> {
+    const doc = await this.apiKeys.findOne(
+      { token, expiration: { $lte: new Date() }, revoked: { $exists: false } },
+      {
+        projection: { _id: 0, privileges: 1, processes: 1 },
+      },
+    );
+
+    if (doc) {
+      await this.apiKeys.updateOne({ token }, { $set: { lastUsed: new Date() } });
+    }
+
+    return doc;
   }
 }

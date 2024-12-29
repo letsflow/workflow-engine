@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Res, Headers, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { ProcessService } from './process.service';
 import {
   ApiBearerAuth,
@@ -14,12 +14,12 @@ import {
 import { StartInstructions } from './process.dto';
 import { Response } from 'express';
 import { ValidationService } from './validation/validation.service';
-import { Account, AuthGuard, AuthUser } from '../common/auth';
+import { Account, ApiPrivilege, AuthGuard, AuthUser } from '../common/auth';
 
 @ApiBearerAuth()
-@UseGuards(AuthGuard)
 @ApiTags('process')
 @Controller('processes')
+@UseGuards(AuthGuard)
 export class ProcessController {
   public constructor(
     private service: ProcessService,
@@ -29,6 +29,7 @@ export class ProcessController {
   @ApiOperation({ summary: 'List all processes' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json')
+  @ApiPrivilege('process:list')
   @Get()
   public async list(@Res() res: Response): Promise<void> {
     const processes = await this.service.list();
@@ -39,6 +40,7 @@ export class ProcessController {
   @ApiConsumes('application/json')
   @ApiBody({ required: true, type: StartInstructions })
   @ApiResponse({ status: 201, description: 'Created' })
+  @ApiPrivilege('process:start')
   @Post()
   public async start(@Body() instructions: StartInstructions, @Res() res: Response): Promise<void> {
     const errors = await this.validation.instantiate(instructions);
@@ -55,14 +57,15 @@ export class ProcessController {
   @ApiOperation({ summary: 'Step through a process' })
   @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
   @ApiParam({ name: 'action', description: 'Process action' })
-  @ApiHeader({ name: 'X-Actor', description: 'Actor key', required: false })
+  @ApiHeader({ name: 'As-Actor', description: 'Actor key (only when using an API key)', required: false })
   @ApiBody({ required: true })
   @ApiResponse({ status: 204, description: 'No Content' })
+  @ApiPrivilege('process:step')
   @Post(':id/:action')
   public async step(
     @Param('id') id: string,
     @Param('action') action: string,
-    @Headers('X-Actor') actor: string | undefined,
+    @Headers('As-Actor') actor: string | undefined,
     @AuthUser() user: Account,
     @Body() body: any,
     @Res() res: Response,
@@ -122,12 +125,9 @@ export class ProcessController {
   @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json')
+  @ApiPrivilege('process:get')
   @Get('/:id')
-  public async get(
-    @Param('id') id: string,
-    @AuthUser() user: { id: string; roles: string[] },
-    @Res() res: Response,
-  ): Promise<void> {
+  public async get(@Param('id') id: string, @AuthUser() user: Account, @Res() res: Response): Promise<void> {
     if (!(await this.service.has(id))) {
       res.status(404).send('Process not found');
       return;

@@ -2,5 +2,11 @@
   "dev": {
     "demoAccounts": true,
     "defaultAccount": "admin"
+  },
+  "jwt": {
+    "secret": "development only!",
+    "signOptions": {
+      "expiresIn": "24h"
+    }
   }
 }

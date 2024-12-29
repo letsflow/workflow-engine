@@ -1,39 +1,58 @@
-import { CanActivate, ExecutionContext, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import { developmentJwtOptions } from '../constants';
 import { AuthService } from '../auth.service';
+import { Reflector } from '@nestjs/core';
+import { Roles } from '../decorators/roles.decorator';
+import { ApiPrivilege } from '../decorators/api-privilege.decorator';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
-    private auth: AuthService,
-    private jwtService: JwtService,
+    private readonly reflector: Reflector,
+    private readonly auth: AuthService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request: Request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
 
-    if (!token) {
-      if (!this.auth.defaultAccount) throw new UnauthorizedException();
+    return token && token.startsWith('lfl_')
+      ? await this.verifyApiKey(context, request, token)
+      : this.verifyJwt(context, request, token);
+  }
 
-      request['user'] = this.auth.defaultAccount;
-      return true;
+  private async verifyApiKey(context: ExecutionContext, request: Request, token: string): Promise<boolean> {
+    const apiKey = await this.auth.verifyApiKey(token);
+    if (!apiKey) throw new ForbiddenException('Invalid API key');
+
+    const privilege = this.reflector.get(ApiPrivilege, context.getHandler());
+
+    if (!privilege || !apiKey.privileges.includes(privilege as any)) {
+      throw new ForbiddenException('Insufficient privileges');
     }
 
-    try {
-      const jwtToken = await this.jwtService.verifyAsync(token, { secret: developmentJwtOptions.secret });
-      request['user'] = this.auth.jwtToAccount(jwtToken);
-    } catch (error) {
-      throw new UnauthorizedException();
+    request['apikey'] = apiKey;
+    return true;
+  }
+
+  private async verifyJwt(context: ExecutionContext, request: Request, token: string): Promise<boolean> {
+    if (!token && !this.auth.defaultAccount) throw new UnauthorizedException();
+
+    const user = token ? this.auth.verifyJWT(token) : this.auth.defaultAccount;
+    if (!user) throw new ForbiddenException();
+
+    const roles = this.reflector.get(Roles, context.getHandler());
+
+    if (roles && !roles.some((role) => user.roles.includes(role))) {
+      throw new ForbiddenException();
     }
 
+    request['user'] = user;
     return true;
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
-    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    const [type, token] = request.headers.authorization?.split(' ', 2) ?? [];
     return type === 'Bearer' ? token : undefined;
   }
 }

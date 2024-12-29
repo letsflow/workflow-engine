@@ -1,18 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ApikeyService } from './apikey.service';
-import { Collection, Db, ObjectId, UpdateFilter, Document } from 'mongodb';
+import { ApiKeyService } from './apikey.service';
+import { Collection, Db, Document, ObjectId, UpdateFilter } from 'mongodb';
 import { ApiKey } from './apikey.dto';
 
-describe('ApikeyService', () => {
-  let service: ApikeyService;
+describe('ApiKeyService', () => {
+  let service: ApiKeyService;
   let collection: Collection;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ApikeyService, { provide: Db, useValue: { collection: jest.fn() } }],
+      providers: [ApiKeyService, { provide: Db, useValue: { collection: jest.fn() } }],
     }).compile();
 
-    service = module.get<ApikeyService>(ApikeyService);
+    service = module.get<ApiKeyService>(ApiKeyService);
 
     collection = {
       findOne: jest.fn(),

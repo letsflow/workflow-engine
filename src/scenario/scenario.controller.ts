@@ -1,14 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiResponse,
-  ApiOperation,
-  ApiParam,
+  ApiBearerAuth,
   ApiBody,
   ApiConsumes,
-  ApiProduces,
   ApiHeader,
-  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiProduces,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { ScenarioService } from './scenario.service';
 import { ScenarioSummary } from './scenario.dto';
@@ -16,19 +16,19 @@ import { Request, Response } from 'express';
 import { yaml } from '@letsflow/core';
 import { Scenario, validate } from '@letsflow/core/scenario';
 import Negotiator from 'negotiator';
-import { AuthGuard, AdminGuard } from '../common/auth';
-
-//const scenarioSchema = 'https://schemas.letsflow.io/v1.0.0/scenario';
+import { ApiPrivilege, AuthGuard, Roles } from '../common/auth';
 
 @ApiBearerAuth()
 @ApiTags('scenario')
 @Controller('scenarios')
-@UseGuards(AuthGuard, AdminGuard)
+@Roles(['admin'])
+@UseGuards(AuthGuard)
 export class ScenarioController {
   constructor(private service: ScenarioService) {}
 
   @ApiOperation({ summary: 'List scenarios' })
   @ApiResponse({ status: 200, description: 'Success', type: ScenarioSummary, isArray: true })
+  @ApiPrivilege('scenario:list')
   @Get()
   async list(): Promise<ScenarioSummary[]> {
     return await this.service.list();
@@ -47,6 +47,7 @@ export class ScenarioController {
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json', 'application/x-yaml')
   @ApiHeader({ name: 'Accept', enum: ['application/json', 'application/yaml'] })
+  @ApiPrivilege('scenario:get')
   @Get('/:id')
   async get(@Param('id') filename: string, @Req() req: Request, @Res() res: Response): Promise<void> {
     const [id, ext] = filename.split('.');
@@ -71,8 +72,16 @@ export class ScenarioController {
   @ApiConsumes('application/json', 'application/yaml')
   @ApiBody({ required: true, schema: { type: 'object' } })
   @ApiResponse({ status: 201, description: 'Created' })
+  @ApiResponse({ status: 400, description: 'Invalid scenario' })
+  @ApiResponse({ status: 403, description: 'Read-only mode' })
+  @ApiPrivilege('scenario:add')
   @Post()
   async store(@Body() scenario: Scenario, @Req() req: Request, @Res() res: Response): Promise<void> {
+    if (this.service.isReadOnly) {
+      res.status(403).send('Read-only mode');
+      return;
+    }
+
     if (!validate(scenario)) {
       res.status(400).json(validate.errors);
       return;
@@ -86,8 +95,14 @@ export class ScenarioController {
   @ApiOperation({ summary: 'Disable a scenario' })
   @ApiParam({ name: 'id', description: 'Scenario ID', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'No Content' })
+  @ApiResponse({ status: 403, description: 'Read-only mode' })
   @Delete('/:id')
   async disable(@Param('id') id: string, @Res() res: Response): Promise<void> {
+    if (this.service.isReadOnly) {
+      res.status(403).send('Read-only mode');
+      return;
+    }
+
     if (!(await this.service.has(id))) {
       res.status(404).send('Scenario not found');
       return;
