@@ -1,8 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ScenarioSummary {
   @ApiProperty()
   id: string;
+
+  @ApiPropertyOptional()
+  name?: string;
 
   @ApiProperty()
   title: string;

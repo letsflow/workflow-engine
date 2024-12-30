@@ -11,6 +11,7 @@ import { uuid } from '@letsflow/core';
 import { from as bsonUUID } from 'uuid-mongodb';
 import { NotifyService } from '../notify/notify.service';
 import { ConfigModule } from '../common/config/config.module';
+import { ScenarioDbService } from '../scenario/scenario-db/scenario-db.service';
 
 describe('ProcessService', () => {
   let module: TestingModule;
@@ -23,7 +24,7 @@ describe('ProcessService', () => {
       imports: [ConfigModule],
       providers: [
         ProcessService,
-        ScenarioService,
+        { provide: ScenarioService, useClass: ScenarioDbService },
         { provide: Db, useValue: { collection: jest.fn() } },
         { provide: NotifyService, useValue: { apply: jest.fn() } },
       ],

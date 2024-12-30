@@ -46,9 +46,7 @@ export class ApiKeyService implements OnModuleInit {
     return new ApiKey({ id: result.insertedId.toHexString(), ...apiKey });
   }
 
-  private determineExpiration(issued: Date, days?: number): Date {
-    if (days === undefined) return undefined;
-
+  private determineExpiration(issued: Date, days: number = 30): Date {
     const expiration = new Date(issued);
     expiration.setDate(issued.getDate() + days);
 

@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { NotifyProvider } from '../interfaces';
-import { Process, Notify } from '@letsflow/core/process';
+import { NotifyProvider } from '../notify-provider.interface';
+import { Notify, Process } from '@letsflow/core/process';
 import { Push } from 'zeromq';
 import { ConfigService } from '../../common/config/config.service';
 import { NotifyMessageService } from '../notify-message/notify-message.service';

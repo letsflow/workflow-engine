@@ -40,6 +40,16 @@ export class ScenarioDbService extends ScenarioService implements OnModuleInit {
       .toArray();
   }
 
+  async getIds(references: string[]): Promise<string[]> {
+    const ids = references.filter(validateUUID).map(bsonUUID);
+    const names = references.filter((reference) => !validateUUID(reference));
+
+    return await this.collection
+      .find({ $or: [{ _id: { $in: ids } }, { name: { $in: names } }] }, { projection: { _id: 1 } })
+      .map(({ _id }) => _id.toString())
+      .toArray();
+  }
+
   async has(id: string): Promise<boolean> {
     if (!validateUUID(id)) return false;
 

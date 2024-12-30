@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { NormalizedScenario, Scenario } from '@letsflow/core/scenario';
 import { ScenarioSummary } from './scenario.dto';
-import { MUUID } from 'uuid-mongodb';
-
-export type ScenarioDocument = NormalizedScenario & { _id: MUUID; _disabled: boolean };
 
 @Injectable()
 export abstract class ScenarioService {
   isReadOnly = false;
 
   abstract list(): Promise<ScenarioSummary[]>;
+
+  abstract getIds(references: string[]): Promise<string[]>;
 
   abstract has(id: string): Promise<boolean>;
 

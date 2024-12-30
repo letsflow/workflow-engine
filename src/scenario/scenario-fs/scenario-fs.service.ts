@@ -15,7 +15,7 @@ export class ScenarioFsService extends ScenarioService {
   private readonly scenarios = new Map<string, NormalizedScenario & { _disabled: boolean }>();
   private scenarioList: ScenarioSummary[] = [];
   private scenarioFiles: Record<string, string> = {};
-  private summeryKeys: string[] = ['id', 'title', 'description', 'tags'];
+  private summeryKeys: string[] = ['id', 'name', 'title', 'description', 'tags'];
 
   constructor(private readonly config: ConfigService) {
     super();
@@ -103,6 +103,12 @@ export class ScenarioFsService extends ScenarioService {
     return this.scenarioList;
   }
 
+  async getIds(references: string[]): Promise<string[]> {
+    return this.scenarioList
+      .filter((scenario) => references.includes(scenario.id) || (scenario.name && references.includes(scenario.name)))
+      .map((scenario) => scenario.id);
+  }
+
   async has(id: string): Promise<boolean> {
     return this.scenarios.has(id);
   }
@@ -131,5 +137,10 @@ export class ScenarioFsService extends ScenarioService {
     const newFilename = filename.replace(/\.yaml$/, '.disabled.yaml');
 
     await fs.rename(`${this.path}/${filename}`, `${this.path}/${newFilename}`);
+  }
+
+  summary(id: string): ScenarioSummary | null {
+    const scenario = this.scenarios.get(id);
+    return scenario ? this.project(scenario) : null;
   }
 }

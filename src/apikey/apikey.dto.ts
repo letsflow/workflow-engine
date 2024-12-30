@@ -1,14 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const privileges = [
-  'scenario:list',
-  'scenario:get',
-  'scenario:store',
-  'scenario:disable',
+  'scenario:read',
+  'scenario:write',
   'apikey:issue',
   'apikey:revoke',
-  'process:list',
-  'process:get',
+  'process:read',
   'process:start',
   'process:step',
 ] as const;
@@ -69,6 +66,7 @@ export class ApiKey {
           items: { type: 'string' },
         },
       },
+      required: ['scenario'],
     },
   })
   processes?: Array<{

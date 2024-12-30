@@ -3,13 +3,21 @@ import { ProcessSummary, StartInstructions } from './process.dto';
 import { ScenarioService } from '../scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID, MUUID } from 'uuid-mongodb';
-import { instantiate, Process, step } from '@letsflow/core/process';
+import { Actor, instantiate, Process, step } from '@letsflow/core/process';
 import { NotifyService } from '../notify/notify.service';
 import { ConfigService } from '../common/config/config.service';
+import { ScenarioDbService } from '../scenario/scenario-db/scenario-db.service';
+import { ScenarioFsService } from '../scenario/scenario-fs/scenario-fs.service';
 
-type ProcessDocument = Omit<Process, 'id' | 'scenario'> & { _id: MUUID; scenario: MUUID };
+type ProcessDocument = Omit<Process, 'id' | 'scenario' | 'actors'> & {
+  _id: MUUID;
+  scenario: MUUID;
+  actors: Array<Actor & { _key: string }>;
+};
 
-interface ListOptions {
+export interface ListOptions {
+  scenarios?: string[];
+  actors?: Array<{ id: string } | { role: string }>;
   sort?: string[];
   page?: number;
   limit?: number;
@@ -49,9 +57,28 @@ export class ProcessService {
     this.collection = this.db.collection<ProcessDocument>('processes');
   }
 
-  async list({ sort, page, limit }: ListOptions = {}): Promise<ProcessSummary[]> {
-    return await this.collection
-      .aggregate([
+  async list({ scenarios, actors, sort, page, limit }: ListOptions = {}): Promise<ProcessSummary[]> {
+    const stages = [];
+
+    if (scenarios) {
+      const scenarioIds = await this.scenarios.getIds(scenarios);
+      stages.push({ $match: { scenario: { $in: scenarioIds.map(bsonUUID) } } });
+    }
+
+    if (actors) {
+      stages.push({
+        $match: {
+          actors: {
+            $elemMatch: {
+              $or: actors.map((actor) => ('id' in actor ? { id: actor.id } : { role: actor.role })),
+            },
+          },
+        },
+      });
+    }
+
+    if (this.scenarios instanceof ScenarioDbService) {
+      stages.push(
         {
           $lookup: {
             from: 'scenarios',
@@ -64,6 +91,12 @@ export class ProcessService {
         {
           $unwind: '$scenario',
         },
+      );
+    }
+
+    const processes = this.collection
+      .aggregate([
+        ...stages,
         {
           $addFields: {
             created: { $arrayElemAt: ['$events.timestamp', 0] },
@@ -77,7 +110,9 @@ export class ProcessService {
         { $limit: limit ?? 0 },
       ])
       .map(({ _id, scenario, ...processProps }) => {
-        if (scenario /* Just in case the data is corrupt and the scenario is not found */) {
+        if (typeof scenario === 'string') {
+          scenario = { id: scenario };
+        } else if (scenario) {
           const { _id: scenarioId, ...scenarioProps } = scenario;
           scenario = { id: scenarioId.toString(), ...scenarioProps };
         }
@@ -87,18 +122,26 @@ export class ProcessService {
           scenario,
           ...processProps,
         } as ProcessSummary;
-      })
-      .toArray();
+      });
+
+    if (this.scenarios instanceof ScenarioFsService) {
+      processes.map(({ scenario, ...processProps }) => {
+        const summary = (this.scenarios as ScenarioFsService).summary(scenario.id) ?? {};
+        return {
+          scenario: { id: scenario.id, ...summary },
+          ...processProps,
+        };
+      });
+    }
+
+    return await processes.toArray();
   }
 
-  async start(instructions: StartInstructions): Promise<Process> {
+  async instantiate(instructions: StartInstructions): Promise<Process> {
     const { _disabled: disabled, ...scenario } = await this.scenarios.get(instructions.scenario);
     if (disabled) throw new Error('Scenario is disabled');
 
-    const process = instantiate(scenario, instructions);
-    await this.save(process);
-
-    return process;
+    return instantiate(scenario, instructions);
   }
 
   async has(id: string): Promise<boolean> {
@@ -109,46 +152,33 @@ export class ProcessService {
     const processDocument = await this.collection.findOne({ _id: bsonUUID(id) }, { projection: { _id: 0 } });
     if (!processDocument) throw new Error('Process not found');
 
-    const { _id, scenario: scenarioId, ...rest } = processDocument;
+    const { _id, scenario: scenarioId, actors, ...rest } = processDocument;
     const { _disabled: _ignore, ...scenario } = await this.scenarios.get(scenarioId.toString());
 
-    return { id, scenario: { id: scenarioId?.toString(), ...scenario }, ...rest };
+    return {
+      id,
+      scenario: { id: scenarioId?.toString(), ...scenario },
+      actors: Object.fromEntries(actors.map(({ _key, ...actor }) => [_key, actor])),
+      ...rest,
+    };
   }
 
-  private async save(process: Process) {
+  async save(process: Process) {
     const {
       id,
-      scenario: { id: scenarioId, ..._ },
+      scenario: { id: scenarioId },
+      actors,
       ...rest
     } = process;
 
     const doc: ProcessDocument = {
       _id: bsonUUID(id),
       scenario: bsonUUID(scenarioId),
+      actors: Object.entries(actors).map(([key, actor]) => ({ _key: key, ...actor })),
       ...rest,
     };
 
     await this.collection.replaceOne({ _id: doc._id }, doc, { upsert: true });
-  }
-
-  isActor(process: Process, userId: string): boolean {
-    return Object.entries(process.actors).some(([, { id }]) => id === userId);
-  }
-
-  determineActor(process: Process, action: string, userId?: string): string | undefined {
-    if (!(action in process.current.actions)) {
-      throw new Error(`Unable to determine actor: Action '${action}' is not available in the current state`);
-    }
-
-    const possibleActors = userId
-      ? Object.entries(process.actors)
-          .filter(([, { id }]) => id === userId)
-          .map(([key]) => key)
-      : Object.keys(process.actors);
-
-    const actors = process.current.actions[action].actor.filter((actor: string) => possibleActors.includes(actor));
-
-    return actors[0];
   }
 
   async step(process: Process, action: string, actor: string, response?: any): Promise<void> {

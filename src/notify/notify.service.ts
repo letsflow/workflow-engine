@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ZeromqService } from './zeromq/zeromq.service';
-import { Process, Notify } from '@letsflow/core/process';
+import { Notify, Process } from '@letsflow/core/process';
 import { ConfigService } from '../common/config/config.service';
-import { NotifyProvider } from './interfaces';
+import { NotifyProvider } from './notify-provider.interface';
 
 @Injectable()
 export class NotifyService implements NotifyProvider {

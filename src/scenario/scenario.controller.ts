@@ -28,7 +28,7 @@ export class ScenarioController {
 
   @ApiOperation({ summary: 'List scenarios' })
   @ApiResponse({ status: 200, description: 'Success', type: ScenarioSummary, isArray: true })
-  @ApiPrivilege('scenario:list')
+  @ApiPrivilege('scenario:read')
   @Get()
   async list(): Promise<ScenarioSummary[]> {
     return await this.service.list();
@@ -47,7 +47,7 @@ export class ScenarioController {
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json', 'application/x-yaml')
   @ApiHeader({ name: 'Accept', enum: ['application/json', 'application/yaml'] })
-  @ApiPrivilege('scenario:get')
+  @ApiPrivilege('scenario:read')
   @Get('/:id')
   async get(@Param('id') filename: string, @Req() req: Request, @Res() res: Response): Promise<void> {
     const [id, ext] = filename.split('.');
@@ -74,7 +74,7 @@ export class ScenarioController {
   @ApiResponse({ status: 201, description: 'Created' })
   @ApiResponse({ status: 400, description: 'Invalid scenario' })
   @ApiResponse({ status: 403, description: 'Read-only mode' })
-  @ApiPrivilege('scenario:add')
+  @ApiPrivilege('scenario:write')
   @Post()
   async store(@Body() scenario: Scenario, @Req() req: Request, @Res() res: Response): Promise<void> {
     if (this.service.isReadOnly) {
@@ -96,6 +96,7 @@ export class ScenarioController {
   @ApiParam({ name: 'id', description: 'Scenario ID', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'No Content' })
   @ApiResponse({ status: 403, description: 'Read-only mode' })
+  @ApiPrivilege('scenario:write')
   @Delete('/:id')
   async disable(@Param('id') id: string, @Res() res: Response): Promise<void> {
     if (this.service.isReadOnly) {
