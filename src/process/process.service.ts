@@ -4,10 +4,10 @@ import { ScenarioService } from '../scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID, MUUID } from 'uuid-mongodb';
 import { Actor, instantiate, Process, step } from '@letsflow/core/process';
-import { NotifyService } from '../notify/notify.service';
 import { ConfigService } from '../common/config/config.service';
 import { ScenarioDbService } from '../scenario/scenario-db/scenario-db.service';
 import { ScenarioFsService } from '../scenario/scenario-fs/scenario-fs.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 type ProcessDocument = Omit<Process, 'id' | 'scenario' | 'actors'> & {
   _id: MUUID;
@@ -40,7 +40,7 @@ export class ProcessService {
   constructor(
     private scenarios: ScenarioService,
     private db: Db,
-    private notify: NotifyService,
+    private eventEmitter: EventEmitter2,
     private config: ConfigService,
   ) {}
 
@@ -182,13 +182,9 @@ export class ProcessService {
   }
 
   async step(process: Process, action: string, actor: string, response?: any): Promise<void> {
-    if (!(action in process.current.actions)) {
-      throw new Error('Unknown action for this process');
-    }
-
     const updatedProcess = step(process, action, actor, response);
     await this.save(updatedProcess);
 
-    await this.notify.invoke(updatedProcess);
+    this.eventEmitter.emit('process.stepped', updatedProcess);
   }
 }

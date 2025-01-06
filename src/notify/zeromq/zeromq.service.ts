@@ -1,17 +1,22 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { NotifyProvider } from '../notify-provider.interface';
+import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Notify, Process } from '@letsflow/core/process';
-import { Push } from 'zeromq';
+import { Push, Reply, SocketOptions } from 'zeromq';
 import { ConfigService } from '../../common/config/config.service';
-import { NotifyMessageService } from '../notify-message/notify-message.service';
+import { createMessage } from '../utils/message';
+import { NotifyProvider } from '../notify-provider.interface';
+
+export type ZeromqOptions =
+  | ({ type: 'push'; address: string } & SocketOptions<Push>)
+  | ({ type: 'reply'; address: string } & SocketOptions<Reply>);
 
 @Injectable()
 export class ZeromqService implements NotifyProvider, OnModuleDestroy {
-  private sockets: Map<string, Push> = new Map();
+  private sockets: Map<string, Push | Reply> = new Map();
 
   constructor(
-    private message: NotifyMessageService,
-    private config: ConfigService,
+    private readonly config: ConfigService,
+    private readonly logger: Logger,
+    @Inject('CREATE_ZEROMQ_SOCKET') private readonly createSocket: (settings: ZeromqOptions) => Push | Reply,
   ) {}
 
   onModuleDestroy() {
@@ -20,29 +25,44 @@ export class ZeromqService implements NotifyProvider, OnModuleDestroy {
     });
   }
 
-  getSocket(address: string): Push {
-    if (this.sockets.has(address)) {
-      return this.sockets[address];
+  getSocket(service: string): Push | Reply {
+    if (this.sockets.has(service)) {
+      return this.sockets.get(service);
     }
 
-    const socket = new Push();
-    socket.connect(address);
+    const settings = this.config.get('services')[service] as ZeromqOptions | undefined;
+    if (!settings) {
+      throw new Error(`Service '${service}' not configured for ZeroMQ`);
+    }
 
-    this.sockets[address] = socket;
+    const socket = this.createSocket(settings);
+
+    this.sockets[service] = socket;
     return socket;
   }
 
-  async notify(process: Process, args: Notify): Promise<void> {
-    if ('action' in args && !args.action) {
-      return; // No action to notify
+  async notify(process: Process, args: Notify): Promise<any> {
+    const socket = this.getSocket(args.service);
+    const message = args.message ?? createMessage(process, args.trigger);
+
+    try {
+      await socket.send(typeof message === 'string' ? message : JSON.stringify(message));
+      this.logger.debug(`Sent notification to ${args.service}: ${message}`);
+    } catch (error) {
+      this.logger.error(`Failed to send notification to ${args.service}: ${error.message}`);
+      return;
     }
 
-    const settings = this.config.get('services')[args.service];
-    if (!settings.address) throw new Error(`ZeroMQ address not configured for service '${args.method}'`);
+    if ('receive' in socket) {
+      // Don't use instanceof for compatibility with Jest mocks
+      try {
+        const [response] = await socket.receive();
+        this.logger.debug(`Received response from ${args.service}: ${response}`);
 
-    const message = this.message.create(process, args.action);
-    const socket = this.getSocket(settings.address);
-
-    await socket.send(message);
+        return response;
+      } catch (error) {
+        this.logger.error(`Failed to handle response from ${args.service}: ${error.message}`);
+      }
+    }
   }
 }

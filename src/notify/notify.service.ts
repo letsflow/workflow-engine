@@ -3,25 +3,32 @@ import { ZeromqService } from './zeromq/zeromq.service';
 import { Notify, Process } from '@letsflow/core/process';
 import { ConfigService } from '../common/config/config.service';
 import { NotifyProvider } from './notify-provider.interface';
+import { OnEvent } from '@nestjs/event-emitter';
+import { ProcessService } from '../process/process.service';
 
 @Injectable()
 export class NotifyService implements NotifyProvider {
   constructor(
     private logger: Logger,
     private config: ConfigService,
+    private readonly processes: ProcessService,
     private zeromq: ZeromqService,
   ) {}
 
-  async invoke(process: Process): Promise<void> {
+  @OnEvent('process.stepped')
+  async onStepped(process: Process) {
     for (const args of process.current.notify) {
-      if ('if' in args && !args.if) continue;
       await this.notify(process, args);
     }
   }
 
   async notify(process: Process, args: Notify): Promise<void> {
     try {
-      await this.getProvider(args.method).notify(process, args);
+      const response = await this.getProvider(args.service).notify(process, args);
+
+      if (args.trigger && typeof response !== 'undefined') {
+        await this.processes.step(process, args.trigger, `service:${args.service}`, response);
+      }
     } catch (err) {
       this.logger.error(err.message);
     }
