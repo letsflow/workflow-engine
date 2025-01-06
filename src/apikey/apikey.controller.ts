@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Res, UseGuards } from '@nes
 import { ApiKeyService } from './apikey.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiKey, IssueApiKeyDto } from './apikey.dto';
-import { ApiPrivilege, AuthGuard, Roles } from '../common/auth';
+import { ApiPrivilege, AuthGuard, Roles } from '@/common/auth';
 import { Response } from 'express';
 
 @ApiBearerAuth()

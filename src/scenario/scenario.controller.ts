@@ -16,7 +16,7 @@ import { Request, Response } from 'express';
 import { yaml } from '@letsflow/core';
 import { Scenario, validate } from '@letsflow/core/scenario';
 import Negotiator from 'negotiator';
-import { ApiPrivilege, AuthGuard, Roles } from '../common/auth';
+import { ApiPrivilege, AuthGuard, Roles } from '@/common/auth';
 
 @ApiBearerAuth()
 @ApiTags('scenario')

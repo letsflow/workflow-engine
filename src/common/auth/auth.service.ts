@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '../config/config.service';
 import { Account } from './account.interface';
 import jmespath from '@letsflow/jmespath';
-import { ApiKey } from '../../apikey';
+import { ApiKey } from '@/apikey';
 import { Collection, Db } from 'mongodb';
 
 type ApiKeyDocument = Omit<ApiKey, 'id' | 'expirationDays' | 'isActive'>;

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ProcessSummary, StartInstructions } from './process.dto';
-import { ScenarioService } from '../scenario/scenario.service';
+import { ScenarioService } from '@/scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID, MUUID } from 'uuid-mongodb';
 import { Actor, instantiate, Process, step } from '@letsflow/core/process';
-import { ConfigService } from '../common/config/config.service';
-import { ScenarioDbService } from '../scenario/scenario-db/scenario-db.service';
-import { ScenarioFsService } from '../scenario/scenario-fs/scenario-fs.service';
+import { ConfigService } from '@/common/config/config.service';
+import { ScenarioDbService } from '@/scenario/scenario-db/scenario-db.service';
+import { ScenarioFsService } from '@/scenario/scenario-fs/scenario-fs.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 type ProcessDocument = Omit<Process, 'id' | 'scenario' | 'actors'> & {

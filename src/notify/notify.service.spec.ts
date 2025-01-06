@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotifyService } from './notify.service';
-import { ConfigService } from '../common/config/config.service';
+import { ConfigService } from '@/common/config/config.service';
 import { ZeromqService } from './zeromq/zeromq.service';
 
 describe('NotifyService', () => {

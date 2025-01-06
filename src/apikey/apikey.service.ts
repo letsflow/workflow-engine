@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { encode } from '../common/utils/base62';
+import { encode } from '@/common/utils/base62';
 import { ApiKey } from './apikey.dto';
 import { Collection, Db, ObjectId, WithId } from 'mongodb';
 import crc32 from 'buffer-crc32';

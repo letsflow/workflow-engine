@@ -5,11 +5,11 @@ import { ValidationService } from './validation/validation.service';
 import { Response } from 'express';
 import { StartInstructions } from './process.dto';
 import { HttpStatus } from '@nestjs/common';
-import { AuthService } from '../common/auth/auth.service';
+import { AuthService } from '@/common/auth/auth.service';
 import Ajv from 'ajv/dist/2020';
-import { ScenarioService } from '../scenario/scenario.service';
-import { Account } from '../common/auth';
-import { ApiKey } from '../apikey';
+import { ScenarioService } from '@/scenario/scenario.service';
+import { Account } from '@/common/auth';
+import { ApiKey } from '@/apikey';
 
 describe('ProcessController', () => {
   let controller: ProcessController;

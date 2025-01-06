@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { ZeromqService } from './zeromq.service';
-import { ConfigService } from '../../common/config/config.service';
+import { ConfigService } from '@/common/config/config.service';
 import { Push } from 'zeromq';
 import { Notify, Process } from '@letsflow/core/process';
 

@@ -1,5 +1,5 @@
 import { ApiExtraModels, ApiProperty, ApiPropertyOptional, getSchemaPath } from '@nestjs/swagger';
-import { ScenarioSummary } from '../scenario/scenario.dto';
+import { ScenarioSummary } from '@/scenario/scenario.dto';
 
 export class ProcessSummary {
   @ApiProperty()

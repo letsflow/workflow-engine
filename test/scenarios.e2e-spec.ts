@@ -3,14 +3,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { AppModule } from '@/app.module';
 import { Collection, MongoClient } from 'mongodb';
 import { uuid, yaml } from '@letsflow/core';
 import { normalize, NormalizedScenario, Scenario } from '@letsflow/core/scenario';
 import { from as bsonUUID } from 'uuid-mongodb';
 import { ScenarioDocument } from '../src/scenario/scenario.service';
-import { ConfigService } from '../src/common/config/config.service';
-import { AuthService } from '../src/common/auth/auth.service';
+import { ConfigService } from '@/common/config/config.service';
+import { AuthService } from '@/common/auth/auth.service';
 
 describe('ScenarioController (e2e)', () => {
   let app: INestApplication;

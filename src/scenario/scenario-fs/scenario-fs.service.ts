@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '../../common/config/config.service';
+import { ConfigService } from '@/common/config/config.service';
 import { normalize, NormalizedScenario, Scenario } from '@letsflow/core/scenario';
 import { ScenarioSummary } from '../scenario.dto';
 import * as fs from 'node:fs/promises';

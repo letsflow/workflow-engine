@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Notify, Process } from '@letsflow/core/process';
 import { Push, Reply, SocketOptions } from 'zeromq';
-import { ConfigService } from '../../common/config/config.service';
+import { ConfigService } from '@/common/config/config.service';
 import { createMessage } from '../utils/message';
 import { NotifyProvider } from '../notify-provider.interface';
 

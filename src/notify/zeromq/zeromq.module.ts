@@ -1,6 +1,6 @@
 import { Logger, Module } from '@nestjs/common';
 import { ZeromqOptions, ZeromqService } from './zeromq.service';
-import { ConfigModule } from '../../common/config/config.module';
+import { ConfigModule } from '@/common/config/config.module';
 import { Push, Reply, SocketOptions } from 'zeromq';
 
 @Module({

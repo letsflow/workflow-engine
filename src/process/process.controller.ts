@@ -14,9 +14,9 @@ import {
 import { StartInstructions } from './process.dto';
 import { Response } from 'express';
 import { ValidationService } from './validation/validation.service';
-import { Account, ApiPrivilege, AuthGuard, AuthUser } from '../common/auth';
-import { AuthApiKey } from '../common/auth/decorators/auth-apikey.decorator';
-import { ApiKey } from '../apikey';
+import { Account, ApiPrivilege, AuthGuard, AuthUser } from '@/common/auth';
+import { AuthApiKey } from '@/common/auth/decorators/auth-apikey.decorator';
+import { ApiKey } from '@/apikey';
 import { Process } from '@letsflow/core/process';
 
 @ApiBearerAuth()

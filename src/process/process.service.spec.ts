@@ -3,15 +3,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProcessService } from './process.service';
 import { Collection, Db } from 'mongodb';
-import { ScenarioService } from '../scenario/scenario.service';
+import { ScenarioService } from '@/scenario/scenario.service';
 import { StartInstructions } from './process.dto';
 import { InstantiateEvent } from '@letsflow/core/process';
 import { normalize } from '@letsflow/core/scenario';
 import { uuid } from '@letsflow/core';
 import { from as bsonUUID } from 'uuid-mongodb';
-import { NotifyService } from '../notify/notify.service';
-import { ConfigModule } from '../common/config/config.module';
-import { ScenarioDbService } from '../scenario/scenario-db/scenario-db.service';
+import { NotifyService } from '@/notify/notify.service';
+import { ConfigModule } from '@/common/config/config.module';
+import { ScenarioDbService } from '@/scenario/scenario-db/scenario-db.service';
 
 describe('ProcessService', () => {
   let module: TestingModule;

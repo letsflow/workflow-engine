@@ -1,11 +1,11 @@
 import Ajv from 'ajv/dist/2020';
 import { Injectable } from '@nestjs/common';
-import { ScenarioService } from '../../scenario/scenario.service';
+import { ScenarioService } from '@/scenario/scenario.service';
 import { StartInstructions } from '../process.dto';
 import { ExplicitState, NormalizedScenario } from '@letsflow/core/scenario';
 import { Actor, Process } from '@letsflow/core/process';
-import { Account } from '../../common/auth';
-import { ApiKey } from '../../apikey';
+import { Account } from '@/common/auth';
+import { ApiKey } from '@/apikey';
 
 @Injectable()
 export class ValidationService {

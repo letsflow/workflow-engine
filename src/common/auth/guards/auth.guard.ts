@@ -2,8 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Unauthor
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
 import { Reflector } from '@nestjs/core';
-import { Roles } from '../decorators/roles.decorator';
-import { ApiPrivilege } from '../decorators/api-privilege.decorator';
+import { ApiPrivilege, Roles } from '@/common/auth';
 
 @Injectable()
 export class AuthGuard implements CanActivate {

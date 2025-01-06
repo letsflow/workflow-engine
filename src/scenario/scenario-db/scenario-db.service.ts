@@ -5,7 +5,7 @@ import { ScenarioSummary } from '../scenario.dto';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID, MUUID } from 'uuid-mongodb';
 import { validate as validateUUID } from 'uuid';
-import { ConfigService } from '../../common/config/config.service';
+import { ConfigService } from '@/common/config/config.service';
 import { ScenarioService } from '../scenario.service';
 
 export type ScenarioDocument = NormalizedScenario & { _id: MUUID; _disabled: boolean };
