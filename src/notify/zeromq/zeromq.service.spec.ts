@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
 import { ZeromqService } from './zeromq.service';
 import { ConfigService } from '@/common/config/config.service';
 import { Push } from 'zeromq';
@@ -8,7 +7,6 @@ import { Notify, Process } from '@letsflow/core/process';
 describe('ZeromqService', () => {
   let service: ZeromqService;
   let configService: ConfigService;
-  let logger: Logger;
   let createSocket: jest.Mock;
 
   const process = {
@@ -34,13 +32,6 @@ describe('ZeromqService', () => {
           },
         },
         {
-          provide: Logger,
-          useValue: {
-            debug: jest.fn(),
-            error: jest.fn(),
-          },
-        },
-        {
           provide: 'CREATE_ZEROMQ_SOCKET',
           useValue: createSocket,
         },
@@ -49,7 +40,6 @@ describe('ZeromqService', () => {
 
     service = module.get<ZeromqService>(ZeromqService);
     configService = module.get<ConfigService>(ConfigService);
-    logger = module.get<Logger>(Logger);
   });
 
   afterEach(() => {
@@ -120,9 +110,7 @@ describe('ZeromqService', () => {
 
       const args = { service: 'testService', trigger: 'next' } as Notify;
 
-      await service.notify(process, args);
-
-      expect(logger.error).toHaveBeenCalledWith('Failed to send notification to testService: Test error');
+      expect(service.notify(process, args)).rejects.toEqual({ message: 'Test error' });
     });
 
     it('should send and receive a response using a Reply socket', async () => {
@@ -158,9 +146,7 @@ describe('ZeromqService', () => {
 
       const args = { service: 'testService', trigger: 'next' } as Notify;
 
-      await service.notify(process, args);
-
-      expect(logger.error).toHaveBeenCalledWith('Failed to handle response from testService: Test error');
+      expect(service.notify(process, args)).rejects.toEqual({ message: 'Test error' });
     });
   });
 });
