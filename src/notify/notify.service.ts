@@ -5,6 +5,8 @@ import { ConfigService } from '@/common/config/config.service';
 import { NotifyProvider } from './notify-provider.interface';
 import { OnEvent } from '@nestjs/event-emitter';
 import { ProcessService } from '@/process/process.service';
+import { WebhookService } from '@/notify/webhook/webhook.service';
+import { AmqpService } from '@/notify/amqp/ampq.service';
 
 @Injectable()
 export class NotifyService implements NotifyProvider {
@@ -12,6 +14,8 @@ export class NotifyService implements NotifyProvider {
     private logger: Logger,
     private config: ConfigService,
     private readonly processes: ProcessService,
+    private amqp: AmqpService,
+    private webhook: WebhookService,
     private zeromq: ZeromqService,
   ) {}
 
@@ -41,6 +45,10 @@ export class NotifyService implements NotifyProvider {
     if (!settings.provider) throw new Error(`Provider not specified for service '${service}'`);
 
     switch (settings.provider) {
+      case 'amqp':
+        return this.amqp;
+      case 'webhook':
+        return this.webhook;
       case 'zeromq':
         return this.zeromq;
       default:

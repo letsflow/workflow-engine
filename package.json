@@ -28,6 +28,7 @@
     "@nestjs/platform-express": "^10.3.9",
     "@nestjs/swagger": "^7.3.1",
     "ajv": "^8.16.0",
+    "amqp-connection-manager": "^4.1.14",
     "buffer-crc32": "^1.0.0",
     "convict": "^6.2.4",
     "mongodb": "^6.7.0",

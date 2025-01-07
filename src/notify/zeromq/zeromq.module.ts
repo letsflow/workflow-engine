@@ -20,7 +20,7 @@ import { Push, Reply, SocketOptions } from 'zeromq';
           (options as SocketOptions<Reply>).receiveTimeout ??= 30000; // Default to 30s receive timeout
         }
 
-        const socket = type === 'push' ? new Push(options) : new Reply(options);
+        const socket = type === 'reply' ? new Reply(options) : new Push(options);
         socket.connect(address);
 
         return socket;
