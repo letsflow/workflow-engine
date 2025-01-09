@@ -9,7 +9,7 @@ import { ConfigService } from '../config/config.service';
     {
       provide: Db,
       useFactory: async (config: ConfigService): Promise<Db> => {
-        config.init();
+        config.onModuleInit();
 
         const client = new MongoClient(config.get('db'), { connectTimeoutMS: 3000 });
         await client.connect();

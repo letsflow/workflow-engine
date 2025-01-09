@@ -42,5 +42,4 @@ lerna-debug.log*
 /storage
 
 # Local configuration
-/src/config/local.json
-/src/config/*.local.json
+/src/config/local

@@ -25,7 +25,7 @@ async function bootstrap() {
   app.disable('x-powered-by');
 
   const config = app.get<ConfigService>(ConfigService);
-  config.init();
+  config.onModuleInit();
 
   app.enableShutdownHooks();
 

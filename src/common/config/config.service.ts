@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import convict from 'convict';
 import schema from '../../config/schema';
 import * as fs from 'node:fs';
@@ -21,8 +21,12 @@ export class ConfigService implements OnModuleInit, OnModuleDestroy {
   private readonly ttl: number = 300000; // 5 minutes in milliseconds
   private reloadInterval: ReturnType<typeof setInterval>;
 
+  constructor(@Inject('ENV_VARS') private readonly env: NodeJS.ProcessEnv) {}
+
   onModuleInit() {
-    this.init();
+    if (!this.config) {
+      this.load();
+    }
     this.reloadInterval ??= setInterval(() => this.load(), this.ttl);
   }
 
@@ -32,17 +36,11 @@ export class ConfigService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  public init(): void {
-    if (!this.config) {
-      this.load();
-    }
-  }
-
   public load(): void {
     const config = convict(schema);
     const env = config.get('env');
 
-    const configFiles = [`${env}.json`, 'local.json', `${env}.local.json`]
+    const configFiles = [`${env}.json`, `local/settings.json`, `local/${env}.json`]
       .map((file) => path.join(CONFIG_PATH, file))
       .filter(fs.existsSync);
 
@@ -54,25 +52,33 @@ export class ConfigService implements OnModuleInit, OnModuleDestroy {
     this.config = config;
   }
 
-  private loadServicesFromEnv(methods: Record<string, Record<string, any>>) {
-    Object.keys(process.env).forEach((key) => {
-      if (key.startsWith('SERVICE_')) {
-        const [_, id, envProp] = key.split('_', 3);
-        const prop = envProp.toLowerCase().replace(/_([a-z])/g, (_, group1) => group1.toUpperCase());
+  private loadServicesFromEnv(services: Record<string, Record<string, any>>) {
+    const keys = Object.keys(this.env).filter((key) => key.startsWith('SERVICE_'));
 
-        methods[id] ??= {};
-        methods[id][prop] = process.env[key];
+    const keyToProp = (key: string) => key.toLowerCase().replace(/_([a-z])/g, (_, group1) => group1.toUpperCase());
+
+    for (const key of keys) {
+      const [, ...parts] = key.split('_');
+      let service: Record<string, any>;
+      let prop: string;
+
+      for (let i = parts.length - 1; i > 0; i--) {
+        service = services[keyToProp(parts.slice(0, i).join('_'))];
+        if (service) {
+          prop = keyToProp(parts.slice(i).join('_'));
+          break;
+        }
       }
-    });
 
-    return methods;
+      if (service && prop) {
+        service[prop] = this.env[key];
+      }
+    }
+
+    return services;
   }
 
   get<K extends Path>(key: K): PathValue<K> {
     return this.config.get(key);
-  }
-
-  has(key: Path): boolean {
-    return this.config.has(key);
   }
 }

@@ -14,7 +14,7 @@ import { MongoModule } from '../mongo/mongo.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        config.init();
+        config.onModuleInit();
         return config.get('jwt');
       },
     }),

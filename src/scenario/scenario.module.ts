@@ -15,7 +15,7 @@ import { Db } from 'mongodb';
     {
       provide: ScenarioService,
       useFactory: (config: ConfigService, db: Db) => {
-        config.init();
+        config.onModuleInit();
         return config.get('scenario.storage') === 'db'
           ? new ScenarioDbService(db, config)
           : new ScenarioFsService(config);
