@@ -36,19 +36,19 @@ export class AuthService implements OnModuleInit {
       {
         id: 'alice',
         name: 'Alice',
-        roles: [],
+        roles: ['support'],
         token: this.jwt.sign({ id: 'alice', name: 'Alice' }),
       },
       {
         id: 'bob',
         name: 'Bob',
-        roles: [],
+        roles: ['management'],
         token: this.jwt.sign({ id: 'bob', name: 'Bob' }),
       },
       {
         id: 'claire',
         name: 'Claire',
-        roles: [],
+        roles: ['client'],
         token: this.jwt.sign({ id: 'claire', name: 'Claire' }),
       },
       {

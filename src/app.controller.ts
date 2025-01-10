@@ -1,11 +1,15 @@
-import { Controller, Get, Res } from '@nestjs/common';
+import { Controller, ForbiddenException, Get, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { AppService } from './app.service';
 import { ApiExcludeEndpoint, ApiOperation } from '@nestjs/swagger';
+import { AuthService } from '@/common/auth/auth.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly app: AppService,
+    private readonly auth: AuthService,
+  ) {}
 
   @Get('/')
   @ApiExcludeEndpoint()
@@ -20,8 +24,17 @@ export class AppController {
     version: string;
     description: string;
     env: string;
-    accounts?: Array<{ id: string; name?: string; roles?: string[]; token: string }>;
   } {
-    return this.appService.info;
+    return this.app.info;
+  }
+
+  @ApiOperation({ summary: 'Get demo accounts' })
+  @Get('/demo-accounts')
+  getDemoAccounts(): Array<{ id: string; name?: string; roles?: string[]; token: string }> {
+    if (!this.auth.demoAccounts) {
+      throw new ForbiddenException('Demo accounts are disabled');
+    }
+
+    return this.auth.demoAccounts;
   }
 }

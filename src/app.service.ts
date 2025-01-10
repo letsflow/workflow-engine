@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from './common/config/config.service';
-import { AuthService } from './common/auth/auth.service';
 
 @Injectable()
 export class AppService implements OnModuleInit {
@@ -9,13 +8,9 @@ export class AppService implements OnModuleInit {
     version: string;
     description: string;
     env: string;
-    accounts?: Array<{ id: string; name?: string; roles?: string[]; token: string }>;
   };
 
-  constructor(
-    private config: ConfigService,
-    private auth: AuthService,
-  ) {}
+  constructor(private config: ConfigService) {}
 
   onModuleInit() {
     this.initInfo();
@@ -30,7 +25,6 @@ export class AppService implements OnModuleInit {
       version: packageInfo.version,
       description: packageInfo.description,
       env: this.config.get('env'),
-      accounts: this.auth.demoAccounts,
     };
   }
 }
