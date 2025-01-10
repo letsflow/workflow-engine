@@ -26,6 +26,14 @@ export class NotifyService implements NotifyProvider {
     }
   }
 
+  @OnEvent('process.retry')
+  async onRetry({ process, services }: { process: Process; services?: string[] }) {
+    for (const args of process.current.notify) {
+      if (!services && !services.includes(args.service)) continue;
+      await this.notify(process, args);
+    }
+  }
+
   async notify(process: Process, args: Notify): Promise<void> {
     try {
       const response = await this.getProvider(args.service).notify(process, args);
@@ -52,7 +60,7 @@ export class NotifyService implements NotifyProvider {
       case 'zeromq':
         return this.zeromq;
       default:
-        throw new Error(`Unsupported provider ${settings.provider} for service '${service}'`);
+        throw new Error(`Unsupported provider '${settings.provider}' for service '${service}'`);
     }
   }
 }

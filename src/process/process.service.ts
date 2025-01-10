@@ -185,6 +185,12 @@ export class ProcessService {
     const updatedProcess = step(process, action, actor, response);
     await this.save(updatedProcess);
 
-    this.eventEmitter.emit('process.stepped', updatedProcess);
+    if (process.current.timestamp.getTime() !== updatedProcess.current.timestamp.getTime()) {
+      this.eventEmitter.emit('process.stepped', updatedProcess);
+    }
+  }
+
+  async retry(process: Process, services?: string[]) {
+    this.eventEmitter.emit('process.retry', { process, services });
   }
 }
