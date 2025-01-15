@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { NextFunction, Request, Response } from 'express';
 import { yaml } from '@letsflow/core';
+import yamlOptions from '@/common/yaml-options';
 
 @Injectable()
 export class YamlBodyParserMiddleware implements NestMiddleware {
@@ -19,7 +20,7 @@ export class YamlBodyParserMiddleware implements NestMiddleware {
 
     req.on('end', () => {
       try {
-        req.body = yaml.parse(data);
+        req.body = yaml.parse(data, yamlOptions);
         next();
       } catch (error) {
         next(error);

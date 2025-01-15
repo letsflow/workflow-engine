@@ -34,7 +34,7 @@ export default {
       env: 'SCENARIO_STORAGE',
     },
     path: {
-      default: './storage/scenarios',
+      default: './scenarios',
       env: 'SCENARIO_PATH',
     },
     readOnly: {
@@ -54,6 +54,12 @@ export default {
       default: [] as string[],
       format: 'comma-separated-list',
       env: 'PROCESS_ADDITIONAL_SUMMERY_FIELDS',
+    },
+  },
+  schema: {
+    path: {
+      default: './schemas',
+      env: 'SCHEMA_PATH',
     },
   },
   jwt: {

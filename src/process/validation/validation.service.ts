@@ -1,4 +1,4 @@
-import Ajv from 'ajv/dist/2020';
+import Ajv from 'ajv';
 import { Injectable } from '@nestjs/common';
 import { ScenarioService } from '@/scenario/scenario.service';
 import { StartInstructions } from '../process.dto';

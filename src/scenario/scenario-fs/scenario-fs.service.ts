@@ -6,6 +6,7 @@ import * as fs from 'node:fs/promises';
 import { watch } from 'node:fs';
 import { uuid, yaml } from '@letsflow/core';
 import { ScenarioService } from '../scenario.service';
+import yamlOptions from '@/common/yaml-options';
 
 @Injectable()
 export class ScenarioFsService extends ScenarioService {
@@ -51,7 +52,7 @@ export class ScenarioFsService extends ScenarioService {
   private async loadScenario(file: string, scenarioYaml?: string) {
     scenarioYaml ??= await fs.readFile(`${this.path}/${file}`, 'utf8');
 
-    const scenario = yaml.parse(scenarioYaml);
+    const scenario = yaml.parse(scenarioYaml, yamlOptions);
     const normalized = normalize(scenario);
     const id = uuid(normalized);
 

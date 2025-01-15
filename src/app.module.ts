@@ -8,9 +8,18 @@ import { ApiKeyModule } from './apikey/apikey.module';
 import { ConfigModule } from './common/config/config.module';
 import { AuthModule } from './common/auth/auth.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { AjvModule } from '@/common/ajv/ajv.module';
 
 @Module({
-  imports: [ConfigModule, AuthModule, ScenarioModule, ProcessModule, ApiKeyModule, EventEmitterModule.forRoot()],
+  imports: [
+    ConfigModule,
+    AuthModule,
+    ScenarioModule,
+    ProcessModule,
+    ApiKeyModule,
+    EventEmitterModule.forRoot(),
+    AjvModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

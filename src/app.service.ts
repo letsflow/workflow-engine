@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from './common/config/config.service';
+import Ajv from 'ajv';
 
 @Injectable()
 export class AppService implements OnModuleInit {
@@ -8,9 +9,13 @@ export class AppService implements OnModuleInit {
     version: string;
     description: string;
     env: string;
+    schemas: string[];
   };
 
-  constructor(private config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly ajv: Ajv,
+  ) {}
 
   onModuleInit() {
     this.initInfo();
@@ -25,6 +30,9 @@ export class AppService implements OnModuleInit {
       version: packageInfo.version,
       description: packageInfo.description,
       env: this.config.get('env'),
+      schemas: Object.values(this.ajv.schemas)
+        .map((env) => (env as any)?.schema?.$id as string | undefined)
+        .filter((id) => !!id && !id.match(/^https:\/\/json-schema\.org\/.+\/meta\//)),
     };
   }
 }

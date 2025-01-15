@@ -38,8 +38,10 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# Runtime data
-/storage
+# Project data
+/scenarios
+/schemas
 
 # Local configuration
-/src/config/local
+src/config/local.json
+src/config/*.local.json
