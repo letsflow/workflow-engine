@@ -1,5 +1,6 @@
 import convict from 'convict';
 import { JwtSignOptions, JwtVerifyOptions } from '@nestjs/jwt';
+import { Privilege } from '@/auth/privileges';
 
 // Define custom format to handle comma-separated lists
 convict.addFormat({
@@ -89,6 +90,16 @@ export default {
     },
     verifyOptions: {
       default: {} as JwtVerifyOptions,
+    },
+  },
+  auth: {
+    roles: {
+      docs: 'Privileges per role',
+      format: Object,
+      default: {
+        admin: ['*'],
+        '*': ['process:start', 'process:step'],
+      } as Record<string, Privilege[]>,
     },
   },
   dev: {

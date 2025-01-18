@@ -4,8 +4,9 @@ import { ScenarioService } from '@/scenario/scenario.service';
 import { StartInstructions } from '../process.dto';
 import { ExplicitState, NormalizedScenario } from '@letsflow/core/scenario';
 import { Actor, Process } from '@letsflow/core/process';
-import { Account } from '@/common/auth';
+import { Account } from '@/auth';
 import { ApiKey } from '@/apikey';
+import { StepActor } from '@/process/process.service';
 
 @Injectable()
 export class ValidationService {
@@ -47,8 +48,6 @@ export class ValidationService {
     for (const key of Object.keys(instructions.actors)) {
       if (!this.actorIsDefined(definedActors, key)) {
         errors.push(`Actor '${key}' not found in scenario`);
-      } else {
-        // TODO: Validate actor using schema
       }
     }
   }
@@ -75,33 +74,6 @@ export class ValidationService {
     return actors.includes(actor);
   }
 
-  canStep(process: Process, action: string): string[] {
-    const errors = [];
-
-    if (!process.scenario.actions[action]) {
-      errors.push(`Action '${action}' not found in scenario`);
-    }
-
-    if (!process.current.actions.find((a) => a.key === action)) {
-      errors.push(`Action '${action}' not available in state '${process.current.key}'`);
-    }
-
-    return errors;
-  }
-
-  validateResponse(process: Process, action: string, response: any) {
-    const { responseSchema } = process.current.actions.find((a) => a.key === action) || { responseSchema: {} };
-
-    if (Object.keys(responseSchema).length === 0) {
-      return []; // Fast return when there's no schema
-    }
-
-    const validate = this.ajv.compile(responseSchema);
-
-    validate(response);
-    return validate.errors;
-  }
-
   private matchUser(actor: Pick<Actor, 'id' | 'role'>, user: Pick<Account, 'id' | 'roles'>): boolean {
     return (
       actor.id === user.id ||
@@ -116,7 +88,11 @@ export class ValidationService {
     return Object.values(process.actors).some((actor) => this.matchUser(actor, user));
   }
 
-  determineActor(process: Process, action: string, user?: Pick<Account, 'id' | 'roles'>): string | undefined {
+  determineActor(process: Process, action: string, actor: string, user?: Account): StepActor | undefined {
+    if (actor) {
+      return { ...(user?.info ?? {}), id: user?.id, roles: user?.roles, key: actor };
+    }
+
     const processAction = process.current.actions.find((a) => a.key === action);
 
     if (!processAction) {
@@ -129,15 +105,21 @@ export class ValidationService {
           .map(([key]) => key)
       : Object.keys(process.actors);
 
-    return processAction.actor.find((actor: string) => possibleActors.includes(actor));
+    const foundActor: string = processAction.actor.find((actor: string) => possibleActors.includes(actor));
+
+    return foundActor ? { ...(user?.info ?? {}), id: user?.id, roles: user?.roles, key: foundActor } : null;
   }
 
   async isAllowedByApiKey(
-    apiKey: Pick<ApiKey, 'processes'>,
+    apiKey: Pick<ApiKey, 'privileges' | 'processes'>,
     scenario: { id: string; name?: string } | string,
     actor?: string,
     action?: string,
   ): Promise<boolean> {
+    if (apiKey.privileges.includes('*') || apiKey.privileges.includes('process:super')) {
+      return true;
+    }
+
     if (typeof scenario === 'string') {
       scenario = { id: scenario, name: (await this.scenarios.get(scenario)).name };
     }

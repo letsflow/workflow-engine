@@ -2,13 +2,12 @@ import { Body, Controller, Delete, Get, Param, Post, Res, UseGuards } from '@nes
 import { ApiKeyService } from './apikey.service';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ApiKey, IssueApiKeyDto } from './apikey.dto';
-import { ApiPrivilege, AuthGuard, Roles } from '@/common/auth';
+import { ApiPrivilege, AuthGuard } from '@/auth';
 import { Response } from 'express';
 
 @ApiBearerAuth()
 @ApiTags('API key')
 @Controller('apikey')
-@Roles(['admin'])
 @UseGuards(AuthGuard)
 export class ApiKeyController {
   constructor(private service: ApiKeyService) {}

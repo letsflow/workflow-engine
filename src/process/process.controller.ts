@@ -14,11 +14,10 @@ import {
 import { StartInstructions } from './process.dto';
 import { Response } from 'express';
 import { ValidationService } from './validation/validation.service';
-import { Account, ApiPrivilege, AuthGuard, AuthUser } from '@/common/auth';
-import { AuthApiKey } from '@/common/auth/decorators/auth-apikey.decorator';
-import { ApiKey } from '@/apikey';
-import { Process } from '@letsflow/core/process';
+import { Account, ApiKey, ApiPrivilege, AuthApiKey, AuthGuard, AuthUser } from '@/auth';
+import { ActionEvent, Process, validateProcess } from '@letsflow/core/process';
 import { isEmpty } from '@/common/utils/is-empty';
+import { AuthService } from '@/auth/auth.service';
 
 @ApiBearerAuth()
 @ApiTags('process')
@@ -28,18 +27,18 @@ export class ProcessController {
   public constructor(
     private service: ProcessService,
     private validation: ValidationService,
+    private auth: AuthService,
   ) {}
 
   @ApiOperation({ summary: 'List processes' })
   @ApiParam({ name: 'page', description: 'List page (max 100 processes per page)', type: 'number' })
   @ApiParam({
     name: 'all',
-    description: 'Also return processes where user is not an actor in (admin only)',
+    description: 'Also return processes where user is not an actor in (requires super privileges)',
     type: 'boolean',
   })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json')
-  @ApiPrivilege('process:read')
   @Get()
   public async list(
     @Query('page') page: number | undefined,
@@ -48,7 +47,7 @@ export class ProcessController {
     @AuthApiKey() apiKey: Pick<ApiKey, 'processes'> | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    if (all && user && !user.roles.includes('admin')) {
+    if (all && !this.auth.hasPrivilege(user, 'process:super')) {
       res.status(403).send('Not allowed to list all processes');
       return;
     }
@@ -58,11 +57,10 @@ export class ProcessController {
       page: page ?? 1,
     };
 
-    if (apiKey?.processes?.length > 0) {
-      options.scenarios = apiKey.processes.map(({ scenario }) => scenario);
+    if (!all && apiKey) {
+      options.scenarios = (apiKey.processes ?? []).map(({ scenario }) => scenario);
     }
-
-    if (user && !all) {
+    if (!all && user) {
       options.actors = [{ id: user.id }, ...(user.roles ?? []).map((role) => ({ role }))];
     }
 
@@ -74,12 +72,11 @@ export class ProcessController {
   @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json')
-  @ApiPrivilege('process:read')
   @Get('/:id')
   public async get(
     @Param('id') id: string,
     @AuthUser() user: Account | undefined,
-    @AuthApiKey() apiKey: Pick<ApiKey, 'processes'> | undefined,
+    @AuthApiKey() apiKey: ApiKey | undefined,
     @Res() res: Response,
   ): Promise<void> {
     if (!(await this.service.has(id))) {
@@ -94,7 +91,7 @@ export class ProcessController {
       return;
     }
 
-    if (user && !user.roles.includes('admin') && !this.validation.isActor(process, user)) {
+    if (user && !this.auth.hasPrivilege(user, 'process:super') && !this.validation.isActor(process, user)) {
       res.status(403).send('Not allowed to access process');
       return;
     }
@@ -106,7 +103,7 @@ export class ProcessController {
   @ApiConsumes('application/json')
   @ApiBody({ required: true, type: StartInstructions })
   @ApiResponse({ status: 201, description: 'Created' })
-  @ApiPrivilege('process:start')
+  @ApiPrivilege(['process:create', 'process:start'])
   @Post()
   public async start(
     @Headers('As-Actor') actor: string | undefined,
@@ -120,13 +117,16 @@ export class ProcessController {
       return;
     }
 
-    if (!instructions.action && user && !user.roles.includes('admin')) {
-      res.status(403).send('Not allowed to start a process without an initial action');
+    if (!instructions.action && user && !this.auth.hasPrivilege(user, 'process:super')) {
+      res.status(403).send('Starting a process without an initial action required super privileges');
       return;
     }
 
-    if ((!isEmpty(instructions.actors) || !isEmpty(instructions.vars)) && user && !user.roles.includes('admin')) {
-      res.status(403).send('Not allowed to start a process with actors or vars');
+    if (
+      (!isEmpty(instructions.actors) || !isEmpty(instructions.vars)) &&
+      !this.auth.hasPrivilege(user, 'process:super')
+    ) {
+      res.status(403).send('Starting a process with actors or vars requires super privileges');
       return;
     }
 
@@ -137,6 +137,12 @@ export class ProcessController {
     }
 
     const process = await this.service.instantiate(instructions);
+
+    const processErrors = validateProcess(process);
+    if (processErrors.length > 0) {
+      res.status(400).json(processErrors);
+      return;
+    }
 
     const { key: action, response } =
       typeof instructions.action === 'object' ? instructions.action : { key: instructions.action, response: {} };
@@ -172,7 +178,7 @@ export class ProcessController {
     @Param('action') action: string,
     @Headers('As-Actor') actor: string | undefined,
     @AuthUser() user: Account | undefined,
-    @AuthApiKey() apiKey: Pick<ApiKey, 'processes'> | undefined,
+    @AuthApiKey() apiKey: ApiKey | undefined,
     @Body() body: any,
     @Res() res: Response,
   ): Promise<void> {
@@ -210,13 +216,11 @@ export class ProcessController {
     response: any,
     res: Response,
   ): Promise<void> {
-    if (user) {
-      actor ||= this.validation.determineActor(process, action, user);
+    const stepActor = this.validation.determineActor(process, action, actor, user);
 
-      if (!actor) {
-        res.status(403).json({ error: { message: 'Not allowed to access process' } });
-        return;
-      }
+    if (!actor) {
+      res.status(403).json({ error: { message: 'Not allowed to access process' } });
+      return;
     }
 
     if (!this.validation.isAuthorized(process, action, actor)) {
@@ -224,23 +228,12 @@ export class ProcessController {
       return;
     }
 
-    const stepErrors = this.validation.canStep(process, action);
-    if (stepErrors.length > 0) {
-      res.status(400).json({ error: { message: 'Unable to step', reason: stepErrors } });
+    const updated = await this.service.step(process, action, stepActor, response);
+    const lastEvent = updated.events[updated.events.length - 1] as ActionEvent;
+
+    if (lastEvent.skipped) {
+      res.status(400).json({ error: { message: 'Unable to step', reason: lastEvent.errors } });
       return;
     }
-
-    const respErrors = this.validation.validateResponse(process, action, response);
-    if (respErrors.length > 0) {
-      res.status(400).json({
-        error: {
-          message: 'Invalid response',
-          reason: respErrors,
-        },
-      });
-      return;
-    }
-
-    await this.service.step(process, action, actor, response);
   }
 }

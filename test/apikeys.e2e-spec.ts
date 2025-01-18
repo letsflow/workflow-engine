@@ -27,16 +27,16 @@ describe('ApikeyController (e2e)', () => {
     await app.init();
 
     // Connect to the MongoDB test database
-    const config = await app.get<ConfigService>(ConfigService);
+    const config = app.get<ConfigService>(ConfigService);
 
     mongo = await MongoClient.connect(config.get('db'));
   });
 
   beforeAll(async () => {
     // Get an auth token
-    const auth = await app.get<AuthService>(AuthService);
+    const auth = app.get<AuthService>(AuthService);
     authHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'admin', roles: ['admin'] }).token };
-    userAuthHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'user' }).token };
+    userAuthHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'user', roles: [] }).token };
   });
 
   afterAll(async () => {
@@ -60,7 +60,7 @@ describe('ApikeyController (e2e)', () => {
         expiration: new Date('2099-01-01T00:00:00.000Z'),
         lastUsed: new Date('2023-06-01T00:00:00.000Z'),
         token: 'lfl_P68WU6iTAfUGRhS32xdhKFCvrmeDjB1VIKjP',
-        privileges: ['scenario:list', 'scenario:add', 'scenario:get', 'scenario:disable'],
+        privileges: ['scenario:read', 'scenario:write'],
       },
       {
         _id: new ObjectId('64984a45308dce960a9e6e02'),
@@ -78,7 +78,7 @@ describe('ApikeyController (e2e)', () => {
         issued: new Date('2023-01-01T00:00:00.000Z'),
         expiration: new Date('2023-06-01T00:00:00.000Z'),
         token: 'lfl_BxJtFPSAcIXzoU4MYhWo3xAO1utrk03lByWn',
-        privileges: ['scenario:list'],
+        privileges: ['scenario:read'],
       },
       {
         _id: new ObjectId('64984a45308dce960a9e6e04'),
@@ -87,7 +87,7 @@ describe('ApikeyController (e2e)', () => {
         issued: new Date('2023-01-01T00:00:00.000Z'),
         revoked: new Date('2023-06-01T00:00:00.000Z'),
         token: 'lfl_1tFPSAcIXzoU4MYhWo3xAO1utrk03lByWnBxJ',
-        privileges: ['scenario:list'],
+        privileges: ['scenario:read'],
       },
     ]);
   });
@@ -164,9 +164,9 @@ describe('ApikeyController (e2e)', () => {
       expect(response.body.expiration).toBe(expectedExpiration.toISOString());
 
       // Assert that the API key is saved in the database
-      const savedKey = await apiKeysCollection.findOne({ _id: new ObjectId(response.body.id) });
+      const savedKey = await apiKeysCollection.findOne({ _id: new ObjectId(response.body.id as string) });
       expect(savedKey).toEqual({
-        _id: new ObjectId(response.body.id),
+        _id: new ObjectId(response.body.id as string),
         name: 'New Key',
         description: 'New Test Key',
         token: response.body.token,

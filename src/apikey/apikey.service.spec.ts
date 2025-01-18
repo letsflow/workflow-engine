@@ -167,14 +167,4 @@ describe('ApiKeyService', () => {
       await expect(service.revoke('123456789012345678901234')).rejects.toThrow("API Key doesn't exist");
     });
   });
-
-  describe('update', () => {
-    it('should update last used date of an api key', async () => {
-      const updateOne = jest.spyOn(collection, 'updateOne').mockResolvedValue({ matchedCount: 1 } as any);
-
-      await service.used('test_token');
-
-      expect(updateOne).toHaveBeenCalledWith({ token: 'test_token' }, { $set: { lastUsed: expect.any(Date) } });
-    });
-  });
 });

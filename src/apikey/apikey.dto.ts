@@ -1,16 +1,5 @@
+import { Privilege, privileges } from '@/auth/privileges';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-const privileges = [
-  'scenario:read',
-  'scenario:write',
-  'apikey:issue',
-  'apikey:revoke',
-  'process:read',
-  'process:start',
-  'process:step',
-] as const;
-
-type Privilege = (typeof privileges)[number];
 
 export class ApiKey {
   constructor(data: Partial<ApiKey>) {

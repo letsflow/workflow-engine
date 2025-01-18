@@ -5,11 +5,11 @@ import { ValidationService } from './validation/validation.service';
 import { Response } from 'express';
 import { StartInstructions } from './process.dto';
 import { HttpStatus } from '@nestjs/common';
-import { AuthService } from '@/common/auth/auth.service';
+import { AuthService } from '@/auth/auth.service';
 import Ajv from 'ajv';
 import Ajv2020 from 'ajv/dist/2020';
 import { ScenarioService } from '@/scenario/scenario.service';
-import { Account } from '@/common/auth';
+import { Account } from '@/auth';
 import { ApiKey } from '@/apikey';
 
 describe('ProcessController', () => {
@@ -212,7 +212,7 @@ describe('ProcessController', () => {
       jest.spyOn(service, 'has').mockResolvedValue(true);
       jest.spyOn(service, 'get').mockResolvedValue(mockProcess as any);
 
-      const user = { id: '99', roles: [], token: '' };
+      const user = { id: '99', roles: [], token: '', info: {} };
 
       await controller.get('00000000-0000-0000-0001-000000000001', user, undefined, mockResponse);
 
@@ -223,7 +223,7 @@ describe('ProcessController', () => {
       jest.spyOn(service, 'has').mockResolvedValue(true);
       jest.spyOn(service, 'get').mockResolvedValue(mockProcess as any);
 
-      const apiKey = { processes: [{ scenario: 'foo' }] };
+      const apiKey = { processes: [{ scenario: 'foo' }], privileges: [] };
 
       await controller.get('00000000-0000-0000-0001-000000000001', undefined, apiKey, mockResponse);
 

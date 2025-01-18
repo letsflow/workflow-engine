@@ -16,12 +16,11 @@ import { Request, Response } from 'express';
 import { yaml } from '@letsflow/core';
 import { Scenario, validate } from '@letsflow/core/scenario';
 import Negotiator from 'negotiator';
-import { ApiPrivilege, AuthGuard, Roles } from '@/common/auth';
+import { ApiPrivilege, AuthGuard } from '@/auth';
 
 @ApiBearerAuth()
 @ApiTags('scenario')
 @Controller('scenarios')
-@Roles(['admin'])
 @UseGuards(AuthGuard)
 export class ScenarioController {
   constructor(private service: ScenarioService) {}

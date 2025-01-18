@@ -39,7 +39,7 @@ export class NotifyService implements NotifyProvider {
       const response = await this.getProvider(args.service).notify(process, args);
 
       if (args.trigger && typeof response !== 'undefined') {
-        await this.processes.step(process, args.trigger, `service:${args.service}`, response);
+        await this.processes.step(process, args.trigger, { key: `service:${args.service}` }, response);
       }
     } catch (err) {
       this.logger.error(err.message);

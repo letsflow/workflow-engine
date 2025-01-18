@@ -23,6 +23,14 @@ export interface ListOptions {
   limit?: number;
 }
 
+export interface StepActor {
+  key: string;
+  id?: string;
+  roles?: string[];
+
+  [_: string]: any;
+}
+
 @Injectable()
 export class ProcessService {
   private collection: Collection<ProcessDocument>;
@@ -181,13 +189,15 @@ export class ProcessService {
     await this.collection.replaceOne({ _id: doc._id }, doc, { upsert: true });
   }
 
-  async step(process: Process, action: string, actor: string, response?: any): Promise<void> {
+  async step(process: Process, action: string, actor: StepActor, response?: any): Promise<Process> {
     const updatedProcess = step(process, action, actor, response);
     await this.save(updatedProcess);
 
     if (process.current.timestamp.getTime() !== updatedProcess.current.timestamp.getTime()) {
       this.eventEmitter.emit('process.stepped', updatedProcess);
     }
+
+    return updatedProcess;
   }
 
   async retry(process: Process, services?: string[]) {

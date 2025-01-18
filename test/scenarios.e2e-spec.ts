@@ -8,7 +8,7 @@ import { Collection, MongoClient } from 'mongodb';
 import { uuid, yaml } from '@letsflow/core';
 import { normalize, NormalizedScenario, Scenario } from '@letsflow/core/scenario';
 import { from as bsonUUID } from 'uuid-mongodb';
-import { ScenarioDocument } from '../src/scenario/scenario.service';
+import { ScenarioDocument } from '@/scenario/scenario-db/scenario-db.service';
 import { ConfigService } from '@/common/config/config.service';
 import { AuthService } from '@/common/auth/auth.service';
 
@@ -59,9 +59,9 @@ describe('ScenarioController (e2e)', () => {
 
   beforeAll(async () => {
     // Get an auth token
-    const auth = await app.get<AuthService>(AuthService);
+    const auth = app.get<AuthService>(AuthService);
     authHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'admin', roles: ['admin'] }).token };
-    userAuthHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'user' }).token };
+    userAuthHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'user', roles: [] }).token };
   });
 
   afterAll(async () => {

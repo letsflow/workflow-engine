@@ -171,7 +171,7 @@ describe('ProcessService', () => {
       jest.spyOn(scenarios, 'get').mockResolvedValue({ id: scenarioId, ...scenario, _disabled: false });
       const replaceOne = jest.spyOn(collection, 'replaceOne').mockResolvedValue({} as any);
 
-      const process = await service.start(instructions);
+      const process = await service.instantiate(instructions);
 
       expect(process.id).toMatch(
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
@@ -184,7 +184,7 @@ describe('ProcessService', () => {
           title: 'actor',
         },
       });
-      expect(process.response).toBeUndefined();
+      expect(process.current.response).toBeUndefined();
 
       expect(process.current.key).toEqual('initial');
       expect(process.current.actions).toEqual([
@@ -222,7 +222,7 @@ describe('ProcessService', () => {
 
     it('should throw an error if the scenario is disabled', async () => {
       jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: true });
-      await expect(service.start(instructions)).rejects.toThrow('Scenario is disabled');
+      await expect(service.instantiate(instructions)).rejects.toThrow('Scenario is disabled');
     });
   });
 

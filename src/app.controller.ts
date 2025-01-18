@@ -2,7 +2,7 @@ import { Controller, ForbiddenException, Get, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { AppService } from './app.service';
 import { ApiExcludeEndpoint, ApiOperation } from '@nestjs/swagger';
-import { AuthService } from '@/common/auth/auth.service';
+import { AuthService } from '@/auth/auth.service';
 
 @Controller()
 export class AppController {

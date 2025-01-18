@@ -1,10 +1,10 @@
 import { Logger, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
-import { ConfigModule } from '../config/config.module';
 import { NotifyService } from '@/notify/notify.service';
-import { ConfigService } from '../config/config.service';
-import { MongoModule } from '../mongo/mongo.module';
+import { ConfigModule } from '@/common/config/config.module';
+import { ConfigService } from '@/common/config/config.service';
+import { MongoModule } from '@/common/mongo/mongo.module';
 
 @Module({
   imports: [

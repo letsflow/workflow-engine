@@ -1,10 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '../config/config.service';
-import { Account } from './account.interface';
+import { ConfigService } from '@/common/config/config.service';
+import { Account } from './types';
 import jmespath from '@letsflow/jmespath';
 import { ApiKey } from '@/apikey';
 import { Collection, Db } from 'mongodb';
+import { Privilege } from './privileges';
 
 type ApiKeyDocument = Omit<ApiKey, 'id' | 'expirationDays' | 'isActive'>;
 
@@ -35,33 +36,33 @@ export class AuthService implements OnModuleInit {
     this._demoAccounts = [
       {
         id: 'alice',
-        name: 'Alice',
+        info: { name: 'Alice' },
         roles: ['support'],
-        token: this.jwt.sign({ id: 'alice', name: 'Alice' }),
+        token: this.jwt.sign({ id: 'alice', info: { name: 'Alice' } }),
       },
       {
         id: 'bob',
-        name: 'Bob',
+        info: { name: 'Bob' },
         roles: ['management'],
-        token: this.jwt.sign({ id: 'bob', name: 'Bob' }),
+        token: this.jwt.sign({ id: 'bob', info: { name: 'Bob' } }),
       },
       {
         id: 'claire',
-        name: 'Claire',
+        info: { name: 'Claire' },
         roles: ['client'],
-        token: this.jwt.sign({ id: 'claire', name: 'Claire' }),
+        token: this.jwt.sign({ id: 'claire', info: { name: 'Claire' } }),
       },
       {
         id: 'david',
-        name: 'David',
+        info: { name: 'David' },
         roles: [],
-        token: this.jwt.sign({ id: 'david', name: 'David' }),
+        token: this.jwt.sign({ id: 'david', info: { name: 'David' } }),
       },
       {
         id: 'admin',
-        name: 'Arnold',
+        info: { name: 'Arnold' },
         roles: ['admin'],
-        token: this.jwt.sign({ id: 'admin', name: 'Arnold', roles: ['admin'] }),
+        token: this.jwt.sign({ id: 'admin', info: { name: 'Arnold' }, roles: ['admin'] }),
       },
     ];
 
@@ -81,27 +82,37 @@ export class AuthService implements OnModuleInit {
     return { ...account, token: this.jwt.sign(account) };
   }
 
+  public hasPrivilege(account: Account, allow: Privilege | Privilege[]): boolean {
+    const map = this.config.get('auth.roles');
+    const list = ['*', ...(Array.isArray(allow) ? allow : [allow])];
+
+    return account.roles.some((role) => map[role].some((p: Privilege) => list.includes(p)));
+  }
+
   public verifyJWT(token: string): Account {
-    let account: any;
+    let user: any;
 
     try {
-      account = this.jwt.verify(token);
+      user = this.jwt.verify(token);
     } catch {
       return null;
     }
 
     if (this.transform) {
-      account = jmespath.search(account, this.transform);
+      user = jmespath.search(user, this.transform);
     }
 
-    account.token = token;
-
-    if (!('id' in account)) {
+    if (!('id' in user)) {
       this.logger.warn('Invalid JWT payload: missing "id" field', { token });
       throw new Error('Invalid JWT payload');
     }
 
-    return account as Account;
+    return {
+      id: user.id,
+      roles: user.roles ?? [],
+      token,
+      info: user.info ?? {},
+    };
   }
 
   async verifyApiKey(token: string): Promise<Pick<ApiKey, 'privileges' | 'processes'> | null> {
