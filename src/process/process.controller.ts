@@ -18,6 +18,7 @@ import { Account, ApiPrivilege, AuthGuard, AuthUser } from '@/common/auth';
 import { AuthApiKey } from '@/common/auth/decorators/auth-apikey.decorator';
 import { ApiKey } from '@/apikey';
 import { Process } from '@letsflow/core/process';
+import { isEmpty } from '@/common/utils/is-empty';
 
 @ApiBearerAuth()
 @ApiTags('process')
@@ -120,7 +121,12 @@ export class ProcessController {
     }
 
     if (!instructions.action && user && !user.roles.includes('admin')) {
-      res.status(403).send('Not allowed to start a process without specifying an action');
+      res.status(403).send('Not allowed to start a process without an initial action');
+      return;
+    }
+
+    if ((!isEmpty(instructions.actors) || !isEmpty(instructions.vars)) && user && !user.roles.includes('admin')) {
+      res.status(403).send('Not allowed to start a process with actors or vars');
       return;
     }
 

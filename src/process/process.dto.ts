@@ -61,6 +61,12 @@ export class StartInstructions {
   })
   actors?: Record<string, Omit<ProcessActor, 'title'>>;
 
+  @ApiPropertyOptional({
+    type: 'object',
+    additionalProperties: true,
+  })
+  vars?: Record<string, any>;
+
   @ApiPropertyOptional()
   action?: StartAction | string;
 }

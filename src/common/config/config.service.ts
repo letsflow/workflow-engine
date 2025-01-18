@@ -38,7 +38,7 @@ export class ConfigService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  public load(): void {
+  load(): void {
     const config = convict(schema);
     const env = config.get('env');
 

@@ -61,6 +61,12 @@ export default {
       default: './schemas',
       env: 'SCHEMA_PATH',
     },
+    fetch: {
+      enabled: {
+        default: true,
+        env: 'SCHEMA_FETCH_ENABLED',
+      },
+    },
   },
   jwt: {
     issuer: {
