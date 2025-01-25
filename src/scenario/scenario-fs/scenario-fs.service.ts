@@ -13,7 +13,8 @@ export class ScenarioFsService extends ScenarioService {
   private readonly logger = new Logger(ScenarioFsService.name);
 
   private path: string;
-  private readonly scenarios = new Map<string, NormalizedScenario & { _disabled: boolean }>();
+  private readonly scenarios = new Map<string, NormalizedScenario>();
+  private readonly scenarioStatus = new Map<string, 'disabled' | 'available'>();
   private scenarioList: ScenarioSummary[] = [];
   private scenarioFiles: Record<string, string> = {};
   private summeryKeys: string[] = ['id', 'name', 'title', 'description', 'tags'];
@@ -66,7 +67,8 @@ export class ScenarioFsService extends ScenarioService {
       this.scenarioList.push({ id, ...this.project(normalized) });
     }
 
-    this.scenarios.set(id, { ...normalized, _disabled: disabled });
+    this.scenarios.set(id, normalized);
+    this.scenarioStatus.set(id, disabled ? 'disabled' : 'available');
     this.scenarioFiles[file] = id;
   }
 
@@ -114,7 +116,11 @@ export class ScenarioFsService extends ScenarioService {
     return this.scenarios.has(id);
   }
 
-  async get(id: string): Promise<NormalizedScenario & { _disabled: boolean }> {
+  async getStatus(id: string): Promise<'not-found' | 'disabled' | 'available'> {
+    return this.scenarioStatus.get(id) || 'not-found';
+  }
+
+  async get(id: string): Promise<NormalizedScenario> {
     const scenario = this.scenarios.get(id);
     if (!scenario) throw new Error('Scenario not found');
 

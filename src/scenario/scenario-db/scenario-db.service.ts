@@ -56,6 +56,15 @@ export class ScenarioDbService extends ScenarioService implements OnModuleInit {
     return (await this.db.collection('scenarios').countDocuments({ _id: bsonUUID(id) })) > 0;
   }
 
+  async getStatus(id: string): Promise<'not-found' | 'disabled' | 'available'> {
+    if (!validateUUID(id)) return 'not-found';
+
+    const scenario = await this.collection.findOne({ _id: bsonUUID(id) }, { projection: { _disabled: 1 } });
+    if (!scenario) return 'not-found';
+
+    return scenario._disabled ? 'disabled' : 'available';
+  }
+
   async get(id: string): Promise<NormalizedScenario & { _disabled: boolean }> {
     if (!validateUUID(id)) throw new Error('Invalid scenario ID');
 

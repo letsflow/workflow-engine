@@ -4,14 +4,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProcessService } from './process.service';
 import { Collection, Db } from 'mongodb';
 import { ScenarioService } from '@/scenario/scenario.service';
-import { StartInstructions } from './process.dto';
-import { InstantiateEvent } from '@letsflow/core/process';
+import { instantiate, InstantiateEvent, step } from '@letsflow/core/process';
 import { normalize } from '@letsflow/core/scenario';
 import { uuid } from '@letsflow/core';
 import { from as bsonUUID } from 'uuid-mongodb';
 import { NotifyService } from '@/notify/notify.service';
 import { ConfigModule } from '@/common/config/config.module';
 import { ScenarioDbService } from '@/scenario/scenario-db/scenario-db.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('ProcessService', () => {
   let module: TestingModule;
@@ -26,6 +26,7 @@ describe('ProcessService', () => {
         ProcessService,
         { provide: ScenarioService, useClass: ScenarioDbService },
         { provide: Db, useValue: { collection: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: NotifyService, useValue: { apply: jest.fn() } },
       ],
     }).compile();
@@ -143,12 +144,60 @@ describe('ProcessService', () => {
     });
   });
 
-  describe('start', () => {
+  describe('save', () => {
     const scenario = normalize({
-      title: 'minimal scenario',
       actions: {
-        complete: {},
+        start: {
+          update: [
+            { set: 'vars.foo', value: 'bar' },
+            { set: 'vars.amount', value: 100 },
+            { set: 'actors.actor.title', value: 'Participant' },
+          ],
+        },
       },
+      states: {
+        initial: {
+          on: 'start',
+          goto: 'main',
+        },
+        main: {
+          on: 'complete',
+          goto: '(done)',
+        },
+      },
+      vars: {
+        foo: 'string',
+        amount: 'number',
+      },
+    });
+    const process = step(instantiate(scenario), 'start');
+
+    it('should save a process', async () => {
+      const replaceOne = jest.spyOn(collection, 'replaceOne').mockResolvedValue({} as any);
+
+      await service.save(process);
+
+      expect(replaceOne).toHaveBeenCalled();
+      expect(replaceOne.mock.calls[0][0]._id.toString()).toEqual(process.id);
+      const stored = replaceOne.mock.calls[0][1];
+
+      expect(stored._id.toString()).toEqual(process.id);
+      expect(stored.scenario.toString()).toEqual(process.scenario.id);
+      expect(stored.actors).toEqual([
+        {
+          _key: 'actor',
+          title: 'Participant',
+        },
+      ]);
+      expect(stored.current).toEqual(process.current);
+      expect(stored.vars).toEqual(process.vars);
+      expect(stored.result).toEqual(process.result);
+    });
+  });
+
+  describe('instantiate', () => {
+    const scenario = normalize({
+      title: 'simple workflow',
       states: {
         initial: {
           on: 'complete',
@@ -158,43 +207,29 @@ describe('ProcessService', () => {
     });
     const scenarioId = uuid(scenario);
 
-    const instructions: StartInstructions = {
-      scenario: scenarioId,
-      actors: {
-        actor: {
-          id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
-        },
-      },
-    };
-
-    it('should start a process', async () => {
+    it('should instantiate a process', async () => {
       jest.spyOn(scenarios, 'get').mockResolvedValue({ id: scenarioId, ...scenario, _disabled: false });
       const replaceOne = jest.spyOn(collection, 'replaceOne').mockResolvedValue({} as any);
 
-      const process = await service.instantiate(instructions);
+      const process = await service.instantiate(scenario);
 
       expect(process.id).toMatch(
         /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
       );
-      expect(process.title).toEqual('minimal scenario');
+      expect(process.title).toEqual('simple workflow');
       expect(process.scenario).toEqual({ id: scenarioId, ...scenario });
-      expect(process.actors).toEqual({
-        actor: {
-          id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
-          title: 'actor',
-        },
-      });
       expect(process.current.response).toBeUndefined();
 
       expect(process.current.key).toEqual('initial');
       expect(process.current.actions).toEqual([
         {
-          $schema: 'https://specs.letsflow.io/v1.0.0/action',
+          $schema: 'https://schemas.letsflow.io/v1.0/action',
           actor: ['actor'],
           description: '',
           title: 'complete',
           key: 'complete',
-          responseSchema: {},
+          if: true,
+          response: {},
         },
       ]);
       expect(process.current.timestamp).toBeInstanceOf(Date);
@@ -205,24 +240,11 @@ describe('ProcessService', () => {
       expect(event.timestamp.toISOString()).toEqual(process.current.timestamp.toISOString());
       expect(event.actors).toEqual({
         actor: {
-          id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
+          title: 'actor',
         },
       });
       expect(event.scenario).toEqual(scenarioId);
       expect(event.id).toEqual(process.id);
-
-      expect(collection.replaceOne).toHaveBeenCalled();
-
-      const { id, scenario: _ignore, ...expected } = process;
-      const { _id, scenario: storedScenario, ...stored } = replaceOne.mock.calls[0][1];
-      expect(_id?.toString()).toEqual(id);
-      expect(storedScenario?.toString()).toEqual(scenarioId);
-      expect(stored).toEqual(expected);
-    });
-
-    it('should throw an error if the scenario is disabled', async () => {
-      jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: true });
-      await expect(service.instantiate(instructions)).rejects.toThrow('Scenario is disabled');
     });
   });
 
@@ -270,12 +292,13 @@ describe('ProcessService', () => {
       const processData = {
         title: 'minimal scenario',
         tags: ['important'],
-        actors: {
-          actor: {
+        actors: [
+          {
+            _key: 'actor',
             id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
             title: 'actor',
           },
-        },
+        ],
         response: {
           foo: 'bar',
         },
@@ -283,7 +306,7 @@ describe('ProcessService', () => {
           key: 'initial',
           actions: {
             complete: {
-              $schema: 'https://specs.letsflow.io/v1.0.0/action',
+              $schema: 'https://schemas.letsflow.io/v1.0/action',
               actor: ['actor'],
               description: '',
               title: 'complete',
@@ -315,7 +338,30 @@ describe('ProcessService', () => {
 
       const process = await service.get(processId);
 
-      expect(process).toEqual({ id: processId, scenario: { id: scenarioId, ...scenario }, ...processData });
+      expect(process.id).toEqual(processId);
+      expect(process.scenario).toEqual({ id: scenarioId, ...scenario });
+      expect(process.actors).toEqual({
+        actor: {
+          id: '76361a70-2bbe-4d11-b2b8-8aecbc5f0224',
+          title: 'actor',
+        },
+      });
+      expect(process.vars).toEqual({
+        foo: 'bar',
+        amount: 100,
+      });
+      expect(process.current).toEqual({
+        key: 'initial',
+        actions: {
+          complete: {
+            $schema: 'https://schemas.letsflow.io/v1.0/action',
+            actor: ['actor'],
+            description: '',
+            title: 'complete',
+          },
+        },
+        timestamp: new Date('2020-01-01T00:00:00.000Z'),
+      });
 
       expect(scenarios.get).toHaveBeenCalledWith(scenarioId);
       expect(collection.findOne).toHaveBeenCalled();

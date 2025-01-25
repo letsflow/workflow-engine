@@ -6,7 +6,7 @@ import { AppModule } from '@/app.module';
 import request from 'supertest';
 import { Collection, MongoClient, ObjectId } from 'mongodb';
 import { ApiKey } from '@/apikey';
-import { AuthService } from '@/common/auth/auth.service';
+import { AuthService } from '@/auth/auth.service';
 import { ConfigService } from '@/common/config/config.service';
 
 type ApiKeyDocument = Omit<ApiKey, 'id' | 'expirationDays' | 'isActive'>;
@@ -16,7 +16,6 @@ describe('ApikeyController (e2e)', () => {
   let mongo: MongoClient;
   let apiKeysCollection: Collection<ApiKeyDocument>;
   let authHeader: { Authorization: string };
-  let userAuthHeader: { Authorization: string };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -35,8 +34,7 @@ describe('ApikeyController (e2e)', () => {
   beforeAll(async () => {
     // Get an auth token
     const auth = app.get<AuthService>(AuthService);
-    authHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'admin', roles: ['admin'] }).token };
-    userAuthHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'user', roles: [] }).token };
+    authHeader = { Authorization: 'Bearer ' + auth.devAccount({ id: 'admin', roles: ['admin'], info: {} }).token };
   });
 
   afterAll(async () => {

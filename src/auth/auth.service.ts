@@ -11,13 +11,14 @@ type ApiKeyDocument = Omit<ApiKey, 'id' | 'expirationDays' | 'isActive'>;
 
 @Injectable()
 export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
+
   private _demoAccounts?: Array<Account>;
   private _defaultAccount?: Account;
   private transform?: string;
   private apiKeys: Collection<ApiKeyDocument>;
 
   constructor(
-    private readonly logger: Logger,
     private readonly config: ConfigService,
     private readonly jwt: JwtService,
     private readonly db: Db,

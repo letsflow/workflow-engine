@@ -12,7 +12,9 @@ export abstract class ScenarioService {
 
   abstract has(id: string): Promise<boolean>;
 
-  abstract get(id: string): Promise<NormalizedScenario & { _disabled: boolean }>;
+  abstract getStatus(id: string): Promise<'not-found' | 'disabled' | 'available'>;
+
+  abstract get(id: string): Promise<NormalizedScenario>;
 
   abstract store(scenario: Scenario): Promise<string>;
 

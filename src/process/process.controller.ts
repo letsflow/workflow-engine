@@ -13,11 +13,11 @@ import {
 } from '@nestjs/swagger';
 import { StartInstructions } from './process.dto';
 import { Response } from 'express';
-import { ValidationService } from './validation/validation.service';
 import { Account, ApiKey, ApiPrivilege, AuthApiKey, AuthGuard, AuthUser } from '@/auth';
-import { ActionEvent, Process, validateProcess } from '@letsflow/core/process';
-import { isEmpty } from '@/common/utils/is-empty';
+import { ActionEvent, Process } from '@letsflow/core/process';
 import { AuthService } from '@/auth/auth.service';
+import { ScenarioService } from '@/scenario/scenario.service';
+import { Scenario } from '@letsflow/core/scenario';
 
 @ApiBearerAuth()
 @ApiTags('process')
@@ -25,10 +25,31 @@ import { AuthService } from '@/auth/auth.service';
 @UseGuards(AuthGuard)
 export class ProcessController {
   public constructor(
-    private service: ProcessService,
-    private validation: ValidationService,
+    private processes: ProcessService,
+    private scenarios: ScenarioService,
     private auth: AuthService,
   ) {}
+
+  isAllowedByApiKey(
+    apiKey: Pick<ApiKey, 'privileges' | 'processes'>,
+    scenario: Scenario,
+    actor?: string,
+    action?: string,
+  ): boolean {
+    if (apiKey.privileges.includes('*') || apiKey.privileges.includes('process:super')) {
+      return true;
+    }
+
+    return (
+      !apiKey.processes ||
+      apiKey.processes.some(
+        (p) =>
+          (!p.scenario || p.scenario === scenario.id || p.scenario === scenario.name) &&
+          (!actor || !p.actors || p.actors.includes(actor)) &&
+          (!action || !p.actions || p.actions.includes(action)),
+      )
+    );
+  }
 
   @ApiOperation({ summary: 'List processes' })
   @ApiParam({ name: 'page', description: 'List page (max 100 processes per page)', type: 'number' })
@@ -64,7 +85,7 @@ export class ProcessController {
       options.actors = [{ id: user.id }, ...(user.roles ?? []).map((role) => ({ role }))];
     }
 
-    const processes = await this.service.list(options);
+    const processes = await this.processes.list(options);
     res.status(200).json(processes);
   }
 
@@ -79,20 +100,20 @@ export class ProcessController {
     @AuthApiKey() apiKey: ApiKey | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    if (!(await this.service.has(id))) {
+    if (!(await this.processes.has(id))) {
       res.status(404).send('Process not found');
       return;
     }
 
-    const process = await this.service.get(id);
+    const process = await this.processes.get(id);
 
-    if (apiKey && !(await this.validation.isAllowedByApiKey(apiKey, process.scenario))) {
+    if (apiKey && !this.isAllowedByApiKey(apiKey, process.scenario)) {
       res.status(403).send('Insufficient privileges of API key');
       return;
     }
 
-    if (user && !this.auth.hasPrivilege(user, 'process:super') && !this.validation.isActor(process, user)) {
-      res.status(403).send('Not allowed to access process');
+    if (user && !this.auth.hasPrivilege(user, 'process:super') && !this.processes.isActor(process, user)) {
+      res.status(403).send('Not allowed to access the process');
       return;
     }
 
@@ -101,9 +122,15 @@ export class ProcessController {
 
   @ApiOperation({ summary: 'Start a process' })
   @ApiConsumes('application/json')
+  @ApiHeader({
+    name: 'As-Actor',
+    description:
+      'Specify actor when multiple actors could have performed the action and actor cannot be determined based on the user',
+    required: false,
+  })
   @ApiBody({ required: true, type: StartInstructions })
   @ApiResponse({ status: 201, description: 'Created' })
-  @ApiPrivilege(['process:create', 'process:start'])
+  @ApiPrivilege('process:start')
   @Post()
   public async start(
     @Headers('As-Actor') actor: string | undefined,
@@ -112,52 +139,30 @@ export class ProcessController {
     @Body() instructions: StartInstructions,
     @Res() res: Response,
   ): Promise<void> {
-    if (apiKey && !(await this.validation.isAllowedByApiKey(apiKey, instructions.scenario))) {
+    const scenarioStatus = await this.scenarios.getStatus(instructions.scenario);
+    if (scenarioStatus !== 'available') {
+      const message = scenarioStatus === 'not-found' ? 'Scenario not found' : 'Scenario is disabled';
+      res.status(400).json({ error: { message } });
+      return;
+    }
+
+    const scenario = await this.scenarios.get(instructions.scenario);
+
+    if (apiKey && !this.isAllowedByApiKey(apiKey, scenario)) {
       res.status(403).send('Insufficient privileges of API key');
       return;
     }
 
-    if (!instructions.action && user && !this.auth.hasPrivilege(user, 'process:super')) {
-      res.status(403).send('Starting a process without an initial action required super privileges');
-      return;
-    }
-
-    if (
-      (!isEmpty(instructions.actors) || !isEmpty(instructions.vars)) &&
-      !this.auth.hasPrivilege(user, 'process:super')
-    ) {
-      res.status(403).send('Starting a process with actors or vars requires super privileges');
-      return;
-    }
-
-    const errors = await this.validation.canInstantiate(instructions);
-    if (errors.length > 0) {
-      res.status(400).json(errors);
-      return;
-    }
-
-    const process = await this.service.instantiate(instructions);
-
-    const processErrors = validateProcess(process);
-    if (processErrors.length > 0) {
-      res.status(400).json(processErrors);
-      return;
-    }
+    const process = await this.processes.instantiate(scenario);
 
     const { key: action, response } =
-      typeof instructions.action === 'object' ? instructions.action : { key: instructions.action, response: {} };
+      typeof instructions.action === 'object' ? instructions.action : { key: instructions.action, response: undefined };
 
-    if (!action) {
-      await this.service.save(process);
-    } else {
-      await this.doStep(process, user, action, actor, response, res);
+    const stepped = await this.doStep(process, user, action, actor, response, res);
+
+    if (stepped) {
+      res.status(201).header('Location', `/processes/${process.id}`).json(process);
     }
-
-    if (res.statusCode >= 400) {
-      return;
-    }
-
-    res.status(201).header('Location', `/processes/${process.id}`).json(process);
   }
 
   @ApiOperation({ summary: 'Step through a process' })
@@ -182,30 +187,28 @@ export class ProcessController {
     @Body() body: any,
     @Res() res: Response,
   ): Promise<void> {
-    if (!(await this.service.has(id))) {
+    if (!(await this.processes.has(id))) {
       res.status(404).send({ error: { message: 'Process not found' } });
       return;
     }
 
-    const process = await this.service.get(id);
+    const process = await this.processes.get(id);
 
     if (!(action in process.scenario.actions)) {
       res.status(404).send({ error: { message: 'Unknown action for this process' } });
       return;
     }
 
-    if (apiKey && !(await this.validation.isAllowedByApiKey(apiKey, process.scenario, actor, action))) {
+    if (apiKey && !this.isAllowedByApiKey(apiKey, process.scenario, actor, action)) {
       res.status(403).send({ error: { message: 'Insufficient privileges of API key' } });
       return;
     }
 
-    await this.doStep(process, user, action, actor, body, res);
+    const stepped = await this.doStep(process, user, action, actor, body, res);
 
-    if (res.statusCode >= 400) {
-      return;
+    if (stepped) {
+      res.status(204).send();
     }
-
-    res.status(204).send();
   }
 
   private async doStep(
@@ -215,25 +218,23 @@ export class ProcessController {
     actor: string,
     response: any,
     res: Response,
-  ): Promise<void> {
-    const stepActor = this.validation.determineActor(process, action, actor, user);
+  ): Promise<boolean> {
+    const stepActor = this.processes.determineActor(process, action, actor, user);
 
-    if (!actor) {
-      res.status(403).json({ error: { message: 'Not allowed to access process' } });
-      return;
+    if (!stepActor) {
+      const message = actor ? `Not allowed to perform as actor '${actor}'` : 'Not allowed to access process';
+      res.status(403).json({ error: { message } });
+      return false;
     }
 
-    if (!this.validation.isAuthorized(process, action, actor)) {
-      res.status(403).json({ error: { message: 'Not allowed to execute this action' } });
-      return;
-    }
-
-    const updated = await this.service.step(process, action, stepActor, response);
+    const updated = await this.processes.step(process, action, stepActor, response);
     const lastEvent = updated.events[updated.events.length - 1] as ActionEvent;
 
     if (lastEvent.skipped) {
-      res.status(400).json({ error: { message: 'Unable to step', reason: lastEvent.errors } });
-      return;
+      res.status(400).json({ error: { message: `Failed to execute action`, reason: lastEvent.errors } });
+      return false;
     }
+
+    return true;
   }
 }

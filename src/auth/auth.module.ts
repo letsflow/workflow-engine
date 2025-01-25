@@ -1,7 +1,6 @@
-import { Logger, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
-import { NotifyService } from '@/notify/notify.service';
 import { ConfigModule } from '@/common/config/config.module';
 import { ConfigService } from '@/common/config/config.service';
 import { MongoModule } from '@/common/mongo/mongo.module';
@@ -20,13 +19,7 @@ import { MongoModule } from '@/common/mongo/mongo.module';
     }),
     MongoModule,
   ],
-  providers: [
-    AuthService,
-    {
-      provide: Logger,
-      useValue: new Logger(NotifyService.name),
-    },
-  ],
+  providers: [AuthService],
   exports: [AuthService],
 })
 export class AuthModule {}

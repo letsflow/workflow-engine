@@ -1,4 +1,4 @@
-import { ApiExtraModels, ApiProperty, ApiPropertyOptional, getSchemaPath } from '@nestjs/swagger';
+import { ApiExtraModels, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ScenarioSummary } from '@/scenario/scenario.dto';
 
 export class ProcessSummary {
@@ -35,11 +35,11 @@ export class StartAction {
   @ApiProperty()
   key: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: 'object',
     additionalProperties: true,
   })
-  response?: Record<string, any>;
+  response?: any;
 }
 
 @ApiExtraModels(ProcessActor)
@@ -47,26 +47,6 @@ export class StartInstructions {
   @ApiProperty()
   scenario: string;
 
-  @ApiPropertyOptional({
-    type: 'object',
-    additionalProperties: {
-      allOf: [
-        { $ref: getSchemaPath(ProcessActor) },
-        {
-          type: 'object',
-          additionalProperties: true,
-        },
-      ],
-    },
-  })
-  actors?: Record<string, Omit<ProcessActor, 'title'>>;
-
-  @ApiPropertyOptional({
-    type: 'object',
-    additionalProperties: true,
-  })
-  vars?: Record<string, any>;
-
-  @ApiPropertyOptional()
-  action?: StartAction | string;
+  @ApiProperty()
+  action: StartAction | string;
 }

@@ -1,7 +1,7 @@
 import { Logger, Module } from '@nestjs/common';
 import Ajv, { Options } from 'ajv';
 import Ajv2020 from 'ajv/dist/2020';
-import * as coreSchemas from '@letsflow/core/schemas/v1.0.0';
+import * as coreSchemas from '@letsflow/core/schemas/v1.0';
 import { ConfigModule } from '@/common/config/config.module';
 import { ConfigService } from '@/common/config/config.service';
 import { FetchModule } from '@/common/fetch/fetch.module';

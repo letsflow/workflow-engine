@@ -5,7 +5,6 @@ export const privileges = [
   'apikey:issue',
   'apikey:revoke',
   'process:super',
-  'process:create',
   'process:start',
   'process:step',
 ] as const;

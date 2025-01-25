@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProcessController } from './process.controller';
 import { ProcessService } from './process.service';
-import { ValidationService } from './validation/validation.service';
 import { Response } from 'express';
 import { StartInstructions } from './process.dto';
 import { HttpStatus } from '@nestjs/common';
@@ -11,11 +10,14 @@ import Ajv2020 from 'ajv/dist/2020';
 import { ScenarioService } from '@/scenario/scenario.service';
 import { Account } from '@/auth';
 import { ApiKey } from '@/apikey';
+import { instantiate, step } from '@letsflow/core/process';
+import { normalize } from '@letsflow/core/scenario';
 
 describe('ProcessController', () => {
   let controller: ProcessController;
-  let service: ProcessService;
-  let validation: ValidationService;
+  let processService: jest.Mocked<ProcessService>;
+  let scenarioService: jest.Mocked<ScenarioService>;
+  let authService: jest.Mocked<AuthService>;
 
   let mockResponse: Response;
 
@@ -32,6 +34,8 @@ describe('ProcessController', () => {
             get: jest.fn(),
             save: jest.fn(),
             step: jest.fn(),
+            isActor: jest.fn(),
+            determineActor: jest.fn(),
           },
         },
         {
@@ -41,26 +45,28 @@ describe('ProcessController', () => {
             getIds: jest.fn(),
             has: jest.fn(),
             get: jest.fn(),
+            getStatus: jest.fn(),
           },
         },
         {
           provide: Ajv,
           useValue: new Ajv2020(),
         },
-        ValidationService,
         {
           provide: AuthService,
           useValue: {
             validateJwt: jest.fn(),
             validateApiKey: jest.fn(),
+            hasPrivilege: jest.fn().mockReturnValue(true),
           },
         },
       ],
     }).compile();
 
-    controller = module.get<ProcessController>(ProcessController);
-    service = module.get<ProcessService>(ProcessService);
-    validation = module.get<ValidationService>(ValidationService);
+    controller = module.get(ProcessController);
+    processService = module.get<jest.Mocked<ProcessService>>(ProcessService);
+    scenarioService = module.get<jest.Mocked<ScenarioService>>(ScenarioService);
+    authService = module.get<jest.Mocked<AuthService>>(AuthService);
   });
 
   beforeEach(() => {
@@ -101,29 +107,29 @@ describe('ProcessController', () => {
     } as ApiKey;
 
     it('should return a list of processes', async () => {
-      jest.spyOn(service, 'list').mockResolvedValue(mockProcesses as any);
+      jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
       await controller.list(undefined, undefined, undefined, undefined, mockResponse);
 
-      expect(service.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
+      expect(processService.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
       expect(mockResponse.json).toHaveBeenCalledWith(mockProcesses);
     });
 
     it('should return page 2', async () => {
-      jest.spyOn(service, 'list').mockResolvedValue(mockProcesses as any);
+      jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
       await controller.list(2, undefined, undefined, undefined, mockResponse);
 
-      expect(service.list).toHaveBeenCalledWith({ limit: 100, page: 2 });
+      expect(processService.list).toHaveBeenCalledWith({ limit: 100, page: 2 });
     });
 
     it('should filter processes by actor for user', async () => {
-      jest.spyOn(service, 'list').mockResolvedValue(mockProcesses as any);
+      jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
       await controller.list(undefined, undefined, user, undefined, mockResponse);
 
-      expect(service.list).toHaveBeenCalledWith({
+      expect(processService.list).toHaveBeenCalledWith({
         limit: 100,
         page: 1,
         actors: [{ id: '2' }, { role: 'admin' }, { role: 'team' }, { role: 'assistant' }],
@@ -131,27 +137,31 @@ describe('ProcessController', () => {
     });
 
     it('should not filter processes by actor for admin user requesting all processes', async () => {
-      jest.spyOn(service, 'list').mockResolvedValue(mockProcesses as any);
+      jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
       await controller.list(undefined, true, user, undefined, mockResponse);
 
-      expect(service.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
+      expect(processService.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
     });
 
-    it('should not allow non-admin users to list all processes', async () => {
+    it('should not allow user with super privileges to list all processes', async () => {
+      authService.hasPrivilege.mockReturnValue(false);
+
       await controller.list(undefined, true, { id: '2', roles: ['team'] } as Account, undefined, mockResponse);
 
-      expect(service.list).not.toHaveBeenCalled();
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
       expect(mockResponse.send).toHaveBeenCalledWith('Not allowed to list all processes');
+
+      expect(authService.hasPrivilege).toBeCalledWith({ id: '2', roles: ['team'] }, 'process:super');
+      expect(processService.list).not.toHaveBeenCalled();
     });
 
     it('should filter processes by scenario for API key', async () => {
-      jest.spyOn(service, 'list').mockResolvedValue(mockProcesses as any);
+      jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
       await controller.list(undefined, undefined, undefined, apiKey, mockResponse);
 
-      expect(service.list).toHaveBeenCalledWith({
+      expect(processService.list).toHaveBeenCalledWith({
         limit: 100,
         page: 1,
         scenarios: ['test', 'test2'],
@@ -159,11 +169,11 @@ describe('ProcessController', () => {
     });
 
     it('should not filter processes for an API key without process limitations', async () => {
-      jest.spyOn(service, 'list').mockResolvedValue(mockProcesses as any);
+      jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
       await controller.list(undefined, true, undefined, {} as ApiKey, mockResponse);
 
-      expect(service.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
+      expect(processService.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
     });
   });
 
@@ -187,41 +197,48 @@ describe('ProcessController', () => {
       ['API key', undefined, { privileges: ['process:read'] }],
       ['API key with scenario', undefined, { privileges: ['process:read'], processes: [{ scenario: 'test' }] }],
     ])('should return a process for %s', async (_, user, apiKey) => {
-      jest.spyOn(service, 'has').mockResolvedValue(true);
-      jest.spyOn(service, 'get').mockResolvedValue(mockProcess as any);
+      processService.has.mockResolvedValue(true);
+      processService.get.mockResolvedValue(mockProcess as any);
 
       await controller.get('00000000-0000-0000-0001-000000000001', user, apiKey, mockResponse);
 
-      expect(service.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
-      expect(service.get).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
+      expect(processService.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
+      expect(processService.get).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
       expect(mockResponse.json).toHaveBeenCalledWith(mockProcess);
     });
 
     it('should return 404 if process not found', async () => {
-      jest.spyOn(service, 'has').mockResolvedValue(false);
+      processService.has.mockResolvedValue(false);
 
       await controller.get('00000000-0000-0000-0001-000000000001', undefined, undefined, mockResponse);
 
-      expect(service.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
+      expect(processService.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
       expect(mockResponse.send).toHaveBeenCalledWith('Process not found');
     });
 
     it('should return 403 if user does not have access to process', async () => {
-      jest.spyOn(service, 'has').mockResolvedValue(true);
-      jest.spyOn(service, 'get').mockResolvedValue(mockProcess as any);
+      processService.has.mockResolvedValue(true);
+      processService.get.mockResolvedValue(mockProcess as any);
+      processService.isActor.mockReturnValue(false);
+      authService.hasPrivilege.mockReturnValue(false);
 
       const user = { id: '99', roles: [], token: '', info: {} };
-
       await controller.get('00000000-0000-0000-0001-000000000001', user, undefined, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+
+      expect(processService.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
+      expect(processService.get).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
+
+      expect(authService.hasPrivilege).toHaveBeenCalledWith(user, 'process:super');
+      expect(processService.isActor).toHaveBeenCalledWith(mockProcess, user);
     });
 
     it('should return 403 if API key does not have access to process', async () => {
-      jest.spyOn(service, 'has').mockResolvedValue(true);
-      jest.spyOn(service, 'get').mockResolvedValue(mockProcess as any);
+      processService.has.mockResolvedValue(true);
+      processService.get.mockResolvedValue(mockProcess as any);
 
       const apiKey = { processes: [{ scenario: 'foo' }], privileges: [] };
 
@@ -232,89 +249,94 @@ describe('ProcessController', () => {
   });
 
   describe('start', () => {
-    const mockProcess = {
-      id: '00000000-0000-0000-0001-000000000001',
-      title: 'Test Process',
-      scenario: {
-        actions: {
-          complete: {},
+    const scenario = normalize({
+      id: '00000000-0000-0000-0002-000000000001',
+      name: 'test',
+      actors: {
+        client: { role: 'client' },
+      },
+      actions: {
+        complete: {
+          update: 'result',
         },
       },
-      actors: {
-        client: { id: '3' },
+      states: {
+        initial: {
+          on: 'complete',
+          goto: 'completed',
+        },
       },
-      created: new Date(),
-      lastUpdated: new Date(),
-      current: {
-        key: 'initial',
-        actions: [
-          {
-            key: 'complete',
-            actor: ['client'],
-            responseSchema: {},
-          },
-        ],
-      },
-    };
+    });
+
+    const process = instantiate(scenario);
+
+    const user: Account = { id: '3', roles: [], info: { name: 'John Doe' }, token: '' };
+    const actor = { key: 'client', id: '3', roles: [], name: 'John Doe' };
+
+    beforeEach(() => {
+      scenarioService.getStatus.mockResolvedValue('available');
+      scenarioService.get.mockResolvedValue(scenario);
+      processService.determineActor.mockReturnValue(actor);
+      processService.instantiate.mockResolvedValue(process);
+    });
 
     it('should start a new process', async () => {
       const mockInstructions: StartInstructions = {
         scenario: 'test-scenario',
-        actors: {},
+        action: 'complete',
       };
 
-      jest.spyOn(validation, 'canInstantiate').mockResolvedValue([]);
-      jest.spyOn(service, 'instantiate').mockResolvedValue(mockProcess as any);
+      const steppedProcess = step(process, 'complete', actor);
+      processService.step.mockResolvedValue(steppedProcess);
 
-      await controller.start(undefined, undefined, undefined, mockInstructions, mockResponse);
+      await controller.start(undefined, user, undefined, mockInstructions, mockResponse);
 
-      expect(validation.canInstantiate).toHaveBeenCalledWith(mockInstructions);
-      expect(service.instantiate).toHaveBeenCalledWith(mockInstructions);
-      expect(service.save).toHaveBeenCalledWith(mockProcess);
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
-      expect(mockResponse.header).toHaveBeenCalledWith('Location', `/processes/${mockProcess.id}`);
-      expect(mockResponse.json).toHaveBeenCalledWith(mockProcess);
+      expect(mockResponse.header).toHaveBeenCalledWith('Location', `/processes/${process.id}`);
+      expect(mockResponse.json).toHaveBeenCalledWith(steppedProcess);
+
+      expect(processService.instantiate).toHaveBeenCalledWith(scenario);
+      expect(processService.step).toBeCalledWith(process, 'complete', actor);
+    });
+
+    it('should start a new process with initial response', async () => {
+      const user = { id: '3', roles: [] } as Account;
+      const mockInstructions: StartInstructions = {
+        scenario: 'test-scenario',
+        action: {
+          key: 'complete',
+          response: 'hello',
+        },
+      };
+
+      const steppedProcess = step(process, 'complete', actor, 'hello');
+      processService.step.mockResolvedValue(steppedProcess);
+
+      await controller.start(undefined, user, undefined, mockInstructions, mockResponse);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
+      expect(mockResponse.header).toHaveBeenCalledWith('Location', `/processes/${process.id}`);
+      expect(mockResponse.json).toHaveBeenCalledWith(steppedProcess);
+
+      expect(processService.instantiate).toHaveBeenCalledWith(scenario);
+      expect(processService.step).toBeCalledWith(process, 'complete', actor, 'hello');
     });
 
     it('should return errors if validation fails', async () => {
       const mockInstructions: StartInstructions = {
         scenario: 'test-scenario',
-        actors: {},
+        action: 'wrongAction',
       };
 
-      const validationErrors = ['Invalid scenario'];
-
-      jest.spyOn(validation, 'canInstantiate').mockResolvedValue(validationErrors);
-
-      await controller.start(undefined, undefined, undefined, mockInstructions, mockResponse);
-
-      expect(validation.canInstantiate).toHaveBeenCalledWith(mockInstructions);
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-      expect(mockResponse.json).toHaveBeenCalledWith(validationErrors);
-    });
-
-    it('should start a new process and perform the initial action', async () => {
-      const user = { id: '3', roles: [] } as Account;
-      const mockInstructions: StartInstructions = {
-        scenario: 'test-scenario',
-        actors: {
-          client: { id: '3' },
-        },
-        action: 'complete',
-      };
-
-      jest.spyOn(validation, 'canInstantiate').mockResolvedValue([]);
-      jest.spyOn(service, 'instantiate').mockResolvedValue(mockProcess as any);
-      jest.spyOn(service, 'step').mockResolvedValue(mockProcess as any);
+      const steppedProcess = step(process, 'wrongAction', actor, {});
+      processService.step.mockResolvedValue(steppedProcess);
 
       await controller.start(undefined, user, undefined, mockInstructions, mockResponse);
 
-      expect(validation.canInstantiate).toHaveBeenCalledWith(mockInstructions);
-      expect(service.instantiate).toHaveBeenCalledWith(mockInstructions);
-      expect(service.step).toHaveBeenCalledWith(mockProcess, 'complete', 'client', {});
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
-      expect(mockResponse.header).toHaveBeenCalledWith('Location', `/processes/${mockProcess.id}`);
-      expect(mockResponse.json).toHaveBeenCalledWith(mockProcess);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: { message: 'Failed to execute action', reason: (steppedProcess.events[1] as any).errors },
+      });
     });
   });
 });

@@ -5,7 +5,7 @@ import { ApiKey } from './apikey.dto';
 
 describe('ApiKeyService', () => {
   let service: ApiKeyService;
-  let collection: Collection;
+  let collection: jest.Mocked<Collection>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -21,10 +21,11 @@ describe('ApiKeyService', () => {
       insertOne: jest.fn(),
       updateOne: jest.fn(),
     } as any;
-    const db = module.get<Db>(Db);
-    db.collection = jest.fn().mockResolvedValue(collection);
 
-    await service.onModuleInit();
+    const db = module.get<jest.Mocked<Db>>(Db);
+    db.collection.mockReturnValue(collection);
+
+    service.onModuleInit();
   });
 
   it('should be defined', () => {
@@ -47,9 +48,9 @@ describe('ApiKeyService', () => {
         ],
       };
 
-      const insertOne = jest
-        .spyOn(collection, 'insertOne')
-        .mockResolvedValue({ insertedId: new ObjectId('123456789012345678901234') } as any);
+      const insertOne = collection.insertOne.mockResolvedValue({
+        insertedId: new ObjectId('123456789012345678901234'),
+      } as any);
 
       const issuedKey = await service.issue(apiKey);
 
@@ -96,7 +97,7 @@ describe('ApiKeyService', () => {
         ]),
       };
 
-      const find = jest.spyOn(collection, 'find').mockReturnThis();
+      const find = collection.find.mockReturnThis();
       find.mockImplementation(() => docs);
 
       const keys = await service.list();
@@ -113,7 +114,7 @@ describe('ApiKeyService', () => {
 
   describe('get', () => {
     it('should get an api key', async () => {
-      const findOne = jest.spyOn(collection, 'findOne').mockResolvedValue({
+      const findOne = collection.findOne.mockResolvedValue({
         _id: new ObjectId('123456789012345678901234'),
         name: 'Test key',
         description: 'Test description',
@@ -147,22 +148,22 @@ describe('ApiKeyService', () => {
 
   describe('revoke', () => {
     it('should revoke an api key', async () => {
-      const updateOne = jest.spyOn(collection, 'updateOne').mockResolvedValue({ matchedCount: 1 } as any);
+      collection.updateOne.mockResolvedValue({ matchedCount: 1 } as any);
 
       await service.revoke('123456789012345678901234');
 
-      expect(updateOne).toHaveBeenCalled();
+      expect(collection.updateOne).toHaveBeenCalled();
 
-      const doc = updateOne.mock.calls[0][0];
+      const doc = collection.updateOne.mock.calls[0][0];
       expect(doc._id).toEqual(new ObjectId('123456789012345678901234'));
 
-      const update: UpdateFilter<Document> = updateOne.mock.calls[0][1];
+      const update: UpdateFilter<Document> = collection.updateOne.mock.calls[0][1];
       expect(update).toHaveProperty('$set.revoked');
       expect(update.$set.revoked).toBeInstanceOf(Date);
     });
 
     it('should throw error when revoking a non-existing api key', async () => {
-      jest.spyOn(collection, 'updateOne').mockResolvedValue({ matchedCount: 0 } as any);
+      collection.updateOne.mockResolvedValue({ matchedCount: 0 } as any);
 
       await expect(service.revoke('123456789012345678901234')).rejects.toThrow("API Key doesn't exist");
     });

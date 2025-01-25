@@ -8,6 +8,8 @@ import { ConfigService } from '@/common/config/config.service';
 import { ScenarioDbService } from '@/scenario/scenario-db/scenario-db.service';
 import { ScenarioFsService } from '@/scenario/scenario-fs/scenario-fs.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Account } from '@/auth';
+import { NormalizedScenario } from '@letsflow/core/scenario';
 
 type ProcessDocument = Omit<Process, 'id' | 'scenario' | 'actors'> & {
   _id: MUUID;
@@ -145,11 +147,16 @@ export class ProcessService {
     return await processes.toArray();
   }
 
-  async instantiate(instructions: StartInstructions): Promise<Process> {
-    const { _disabled: disabled, ...scenario } = await this.scenarios.get(instructions.scenario);
-    if (disabled) throw new Error('Scenario is disabled');
+  public async canInstantiate(instructions: StartInstructions): Promise<[boolean, string?]> {
+    const status = await this.scenarios.getStatus(instructions.scenario);
 
-    return instantiate(scenario, instructions);
+    if (status === 'not-found') return [false, 'Scenario not found'];
+    if (status === 'disabled') return [false, 'Scenario is disabled'];
+    return [true];
+  }
+
+  async instantiate(scenario: NormalizedScenario): Promise<Process> {
+    return instantiate(scenario);
   }
 
   async has(id: string): Promise<boolean> {
@@ -202,5 +209,47 @@ export class ProcessService {
 
   async retry(process: Process, services?: string[]) {
     this.eventEmitter.emit('process.retry', { process, services });
+  }
+
+  private matchUser(actor: Pick<Actor, 'id' | 'role'>, user: Pick<Account, 'id' | 'roles'>): boolean {
+    if (!actor.id && (!actor.role || actor.role.length === 0)) {
+      return false;
+    }
+
+    return (
+      actor.id === undefined ||
+      actor.id === user.id ||
+      (actor.role &&
+        (typeof actor.role === 'string'
+          ? user.roles.includes(actor.role)
+          : user.roles.some((r) => actor.role.includes(r))))
+    );
+  }
+
+  isActor(process: Process, user: Pick<Account, 'id' | 'roles'>): boolean {
+    return Object.values(process.actors).some((actor) => this.matchUser(actor, user));
+  }
+
+  determineActor(process: Process, action: string, actor?: string, user?: Account): StepActor | null {
+    if (actor) {
+      // TODO; check if actor is allowed to perform action
+      return { ...(user?.info ?? {}), id: user?.id, roles: user?.roles, key: actor };
+    }
+
+    const processAction = process.current.actions.find((a) => a.key === action);
+
+    if (!processAction) {
+      return null;
+    }
+
+    const possibleActors = user
+      ? Object.entries(process.actors)
+          .filter(([, actor]) => this.matchUser(actor, user))
+          .map(([key]) => key)
+      : Object.keys(process.actors);
+
+    const foundActor: string = processAction.actor.find((actor: string) => possibleActors.includes(actor));
+
+    return foundActor ? { ...(user?.info ?? {}), id: user?.id, roles: user?.roles, key: foundActor } : null;
   }
 }
