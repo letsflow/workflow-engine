@@ -3,7 +3,7 @@ import { normalize, Schema } from '@letsflow/core/scenario';
 import fs from 'fs/promises';
 import { yaml } from '@letsflow/core';
 import yamlOptions from '@/common/yaml-options';
-import { schemaSchema } from '@letsflow/core/schemas/v1.0.0';
+import { schemaSchema } from '@letsflow/core/schemas/v1.0';
 
 type FetchFunction = typeof fetch;
 
