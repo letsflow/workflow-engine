@@ -727,9 +727,9 @@
     path-to-regexp "3.3.0"
     tslib "2.8.1"
 
-"@nestjs/event-emitter@^2.1.1":
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/@nestjs/event-emitter/-/event-emitter-2.1.1.tgz#4e34edc487c507edbe6d02033e3dd014a19210f9"
+"@nestjs/event-emitter@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@nestjs/event-emitter/-/event-emitter-3.0.0.tgz#abed4ab91c32b03423274bf97a154f8967dfd55d"
   dependencies:
     eventemitter2 "6.4.9"
 
