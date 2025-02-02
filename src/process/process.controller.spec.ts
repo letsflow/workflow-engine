@@ -256,22 +256,26 @@ describe('ProcessController', () => {
         client: { role: 'client' },
       },
       actions: {
-        complete: {
+        init: {
           update: 'result',
         },
       },
       states: {
         initial: {
+          on: 'init',
+          goto: 'main',
+        },
+        main: {
           on: 'complete',
-          goto: 'completed',
+          goto: '(done)',
         },
       },
     });
 
     const process = instantiate(scenario);
 
-    const user: Account = { id: '3', roles: [], info: { name: 'John Doe' }, token: '' };
-    const actor = { key: 'client', id: '3', roles: [], name: 'John Doe' };
+    const user: Account = { id: '3', roles: ['client'], info: { name: 'John Doe' }, token: '' };
+    const actor = { key: 'client', id: '3', roles: ['client'], name: 'John Doe' };
 
     beforeEach(() => {
       scenarioService.getStatus.mockResolvedValue('available');
@@ -283,10 +287,10 @@ describe('ProcessController', () => {
     it('should start a new process', async () => {
       const mockInstructions: StartInstructions = {
         scenario: 'test-scenario',
-        action: 'complete',
+        action: 'init',
       };
 
-      const steppedProcess = step(process, 'complete', actor);
+      const steppedProcess = step(process, 'init', actor);
       processService.step.mockResolvedValue(steppedProcess);
 
       await controller.start(undefined, user, undefined, mockInstructions, mockResponse);
@@ -296,7 +300,7 @@ describe('ProcessController', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(steppedProcess);
 
       expect(processService.instantiate).toHaveBeenCalledWith(scenario);
-      expect(processService.step).toBeCalledWith(process, 'complete', actor);
+      expect(processService.step).toBeCalledWith(process, 'init', actor, undefined);
     });
 
     it('should start a new process with initial response', async () => {
@@ -304,12 +308,12 @@ describe('ProcessController', () => {
       const mockInstructions: StartInstructions = {
         scenario: 'test-scenario',
         action: {
-          key: 'complete',
+          key: 'init',
           response: 'hello',
         },
       };
 
-      const steppedProcess = step(process, 'complete', actor, 'hello');
+      const steppedProcess = step(process, 'init', actor, 'hello');
       processService.step.mockResolvedValue(steppedProcess);
 
       await controller.start(undefined, user, undefined, mockInstructions, mockResponse);
@@ -319,7 +323,7 @@ describe('ProcessController', () => {
       expect(mockResponse.json).toHaveBeenCalledWith(steppedProcess);
 
       expect(processService.instantiate).toHaveBeenCalledWith(scenario);
-      expect(processService.step).toBeCalledWith(process, 'complete', actor, 'hello');
+      expect(processService.step).toBeCalledWith(process, 'init', actor, 'hello');
     });
 
     it('should return errors if validation fails', async () => {

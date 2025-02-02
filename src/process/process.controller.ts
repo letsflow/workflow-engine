@@ -153,14 +153,14 @@ export class ProcessController {
       return;
     }
 
-    const process = await this.processes.instantiate(scenario);
+    let process = await this.processes.instantiate(scenario);
 
     const { key: action, response } =
       typeof instructions.action === 'object' ? instructions.action : { key: instructions.action, response: undefined };
 
-    const stepped = await this.doStep(process, user, action, actor, response, res);
+    process = await this.doStep(process, user, action, actor, response, res);
 
-    if (stepped) {
+    if (process) {
       res.status(201).header('Location', `/processes/${process.id}`).json(process);
     }
   }
@@ -192,7 +192,7 @@ export class ProcessController {
       return;
     }
 
-    const process = await this.processes.get(id);
+    let process = await this.processes.get(id);
 
     if (!(action in process.scenario.actions)) {
       res.status(404).send({ error: { message: 'Unknown action for this process' } });
@@ -204,10 +204,10 @@ export class ProcessController {
       return;
     }
 
-    const stepped = await this.doStep(process, user, action, actor, body, res);
+    process = await this.doStep(process, user, action, actor, body, res);
 
-    if (stepped) {
-      res.status(204).send();
+    if (process) {
+      res.status(200).json(process);
     }
   }
 
@@ -218,13 +218,13 @@ export class ProcessController {
     actor: string,
     response: any,
     res: Response,
-  ): Promise<boolean> {
+  ): Promise<Process | null> {
     const stepActor = this.processes.determineActor(process, action, actor, user);
 
     if (!stepActor) {
       const message = actor ? `Not allowed to perform as actor '${actor}'` : 'Not allowed to access process';
       res.status(403).json({ error: { message } });
-      return false;
+      return null;
     }
 
     const updated = await this.processes.step(process, action, stepActor, response);
@@ -232,9 +232,9 @@ export class ProcessController {
 
     if (lastEvent.skipped) {
       res.status(400).json({ error: { message: `Failed to execute action`, reason: lastEvent.errors } });
-      return false;
+      return null;
     }
 
-    return true;
+    return updated;
   }
 }
