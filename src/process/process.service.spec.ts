@@ -7,17 +7,28 @@ import { ScenarioService } from '@/scenario/scenario.service';
 import { instantiate, InstantiateEvent, step } from '@letsflow/core/process';
 import { normalize } from '@letsflow/core/scenario';
 import { uuid } from '@letsflow/core';
-import { from as bsonUUID } from 'uuid-mongodb';
+import { from as bsonUUID, MUUID } from 'uuid-mongodb';
 import { NotifyService } from '@/notify/notify.service';
 import { ConfigModule } from '@/common/config/config.module';
 import { ScenarioDbService } from '@/scenario/scenario-db/scenario-db.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
+function normalizeBsonUUID(process: { _id: MUUID; scenario: MUUID; [_: string]: any }) {
+  const { _id: id, scenario, ...rest } = process;
+
+  return {
+    _id: id.toString(),
+    scenario: scenario.toString(),
+    ...rest,
+  };
+}
+
 describe('ProcessService', () => {
   let module: TestingModule;
   let service: ProcessService;
-  let collection: Collection;
-  let scenarios: ScenarioService;
+  let collection: jest.Mocked<Collection>;
+  let scenarios: jest.Mocked<ScenarioService>;
+  let eventEmitter: jest.Mocked<EventEmitter2>;
 
   beforeEach(async () => {
     module = await Test.createTestingModule({
@@ -31,8 +42,9 @@ describe('ProcessService', () => {
       ],
     }).compile();
 
-    service = module.get<ProcessService>(ProcessService);
-    scenarios = module.get<ScenarioService>(ScenarioService);
+    service = module.get(ProcessService);
+    scenarios = module.get(ScenarioService);
+    eventEmitter = module.get(EventEmitter2);
 
     collection = {
       findOne: jest.fn(),
@@ -173,13 +185,11 @@ describe('ProcessService', () => {
     const process = step(instantiate(scenario), 'start');
 
     it('should save a process', async () => {
-      const replaceOne = jest.spyOn(collection, 'replaceOne').mockResolvedValue({} as any);
-
       await service.save(process);
 
-      expect(replaceOne).toHaveBeenCalled();
-      expect(replaceOne.mock.calls[0][0]._id.toString()).toEqual(process.id);
-      const stored = replaceOne.mock.calls[0][1];
+      expect(collection.replaceOne).toHaveBeenCalled();
+      expect(collection.replaceOne.mock.calls[0][0]._id.toString()).toEqual(process.id);
+      const stored = collection.replaceOne.mock.calls[0][1];
 
       expect(stored._id.toString()).toEqual(process.id);
       expect(stored.scenario.toString()).toEqual(process.scenario.id);
@@ -209,8 +219,6 @@ describe('ProcessService', () => {
 
     it('should instantiate a process', async () => {
       jest.spyOn(scenarios, 'get').mockResolvedValue({ id: scenarioId, ...scenario, _disabled: false });
-      const replaceOne = jest.spyOn(collection, 'replaceOne').mockResolvedValue({} as any);
-
       const process = await service.instantiate(scenario);
 
       expect(process.id).toMatch(
@@ -251,24 +259,23 @@ describe('ProcessService', () => {
   describe('has', () => {
     it('should return true is the process exists', async () => {
       const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
-      const countDocuments = jest.spyOn(collection, 'countDocuments').mockResolvedValue(1);
+      collection.countDocuments.mockResolvedValue(1);
 
       const exists = await service.has(processId);
       expect(exists).toBe(true);
 
-      expect(countDocuments).toHaveBeenCalled();
-      expect(countDocuments.mock.calls[0][0]._id.toString()).toEqual(processId);
+      expect(collection.countDocuments).toHaveBeenCalled();
+      expect(collection.countDocuments.mock.calls[0][0]._id.toString()).toEqual(processId);
     });
 
     it("should return false is the process doesn't exist", async () => {
       const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
-      const countDocuments = jest.spyOn(collection, 'countDocuments').mockResolvedValue(0);
 
       const exists = await service.has(processId);
       expect(exists).toBe(false);
 
-      expect(countDocuments).toHaveBeenCalled();
-      expect(countDocuments.mock.calls[0][0]._id.toString()).toEqual(processId);
+      expect(collection.countDocuments).toHaveBeenCalled();
+      expect(collection.countDocuments.mock.calls[0][0]._id.toString()).toEqual(processId);
     });
   });
 
@@ -334,7 +341,7 @@ describe('ProcessService', () => {
       const processDocument = { _id: bsonUUID(processId), scenario: bsonUUID(scenarioId), ...processData };
 
       jest.spyOn(scenarios, 'get').mockResolvedValue({ ...scenario, _disabled: false });
-      const findOne = jest.spyOn(collection, 'findOne').mockResolvedValue(processDocument);
+      collection.findOne.mockResolvedValue(processDocument);
 
       const process = await service.get(processId);
 
@@ -365,17 +372,73 @@ describe('ProcessService', () => {
 
       expect(scenarios.get).toHaveBeenCalledWith(scenarioId);
       expect(collection.findOne).toHaveBeenCalled();
-      expect(findOne.mock.calls[0][0]._id.toString()).toEqual(processId);
+      expect(collection.findOne.mock.calls[0][0]._id.toString()).toEqual(processId);
     });
 
     it("should throw an error if the process doesn't exist", async () => {
       const processId = 'b2d39a1f-88bb-450e-95c5-feeffe95abe6';
-      const findOne = jest.spyOn(collection, 'findOne').mockResolvedValue(null);
 
       await expect(service.get(processId)).rejects.toThrow('Process not found');
 
-      expect(findOne).toHaveBeenCalled();
-      expect(findOne.mock.calls[0][0]._id.toString()).toEqual(processId);
+      expect(collection.findOne).toHaveBeenCalled();
+      expect(collection.findOne.mock.calls[0][0]._id.toString()).toEqual(processId);
+    });
+  });
+
+  describe('save', () => {
+    const scenario = normalize({
+      title: 'simple workflow',
+      states: {
+        initial: {
+          on: 'complete',
+          goto: '(done)',
+        },
+      },
+    });
+    const scenarioId = uuid(scenario);
+
+    const process = instantiate(scenario);
+    const { id: processId, scenario: _, actors, ...rest } = process;
+
+    const doc = {
+      _id: bsonUUID(processId),
+      scenario: bsonUUID(scenarioId),
+      actors: Object.entries(actors).map(([key, actor]) => ({ _key: key, ...actor })),
+      ...rest,
+    };
+
+    it('should save a process', async () => {
+      await service.save(process);
+
+      expect(collection.replaceOne).toHaveBeenCalled();
+      expect(collection.replaceOne.mock.calls[0][0]._id.toString()).toEqual(processId);
+      expect(normalizeBsonUUID(collection.replaceOne.mock.calls[0][1] as any)).toEqual(normalizeBsonUUID(doc));
+    });
+  });
+
+  describe('step', () => {
+    const scenario = normalize({
+      title: 'simple workflow',
+      states: {
+        initial: {
+          on: 'complete',
+          goto: '(done)',
+        },
+        done: {},
+      },
+    });
+
+    it('should step through a process', async () => {
+      const save = jest.spyOn(service, 'save');
+      const process = instantiate(scenario);
+
+      const updatedProcess = await service.step(process, 'complete', { key: 'actor' });
+
+      expect(updatedProcess.id).toEqual(process.id);
+      expect(updatedProcess.current.key).toEqual('(done)');
+
+      expect(save).toHaveBeenCalledWith(updatedProcess);
+      expect(eventEmitter.emit).toBeCalledWith('process.stepped', updatedProcess);
     });
   });
 });

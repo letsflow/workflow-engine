@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { ProcessSummary, StartInstructions } from './process.dto';
+import { Injectable, Logger } from '@nestjs/common';
+import { ProcessSummary } from './process.dto';
 import { ScenarioService } from '@/scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID, MUUID } from 'uuid-mongodb';
-import { Actor, instantiate, Process, step } from '@letsflow/core/process';
+import { Actor, instantiate, predict, PredictedState, Process, step } from '@letsflow/core/process';
 import { ConfigService } from '@/common/config/config.service';
 import { ScenarioDbService } from '@/scenario/scenario-db/scenario-db.service';
 import { ScenarioFsService } from '@/scenario/scenario-fs/scenario-fs.service';
@@ -35,6 +35,7 @@ export interface StepActor {
 
 @Injectable()
 export class ProcessService {
+  private logger = new Logger(ProcessService.name);
   private collection: Collection<ProcessDocument>;
   private summeryProjection: Record<string, number> = {
     _id: 1,
@@ -147,16 +148,19 @@ export class ProcessService {
     return await processes.toArray();
   }
 
-  public async canInstantiate(instructions: StartInstructions): Promise<[boolean, string?]> {
-    const status = await this.scenarios.getStatus(instructions.scenario);
-
-    if (status === 'not-found') return [false, 'Scenario not found'];
-    if (status === 'disabled') return [false, 'Scenario is disabled'];
-    return [true];
+  instantiate(scenario: NormalizedScenario): Process {
+    return instantiate(scenario);
   }
 
-  async instantiate(scenario: NormalizedScenario): Promise<Process> {
-    return instantiate(scenario);
+  predict(process: Process): Process & { next?: PredictedState[] } {
+    try {
+      return { ...process, next: predict(process) };
+    } catch (error) {
+      this.logger.warn(
+        `Failed to predict next states of process ${process.id} with scenario ${process.scenario.id}: ${error}`,
+      );
+      return process;
+    }
   }
 
   async has(id: string): Promise<boolean> {
