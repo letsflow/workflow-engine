@@ -8,13 +8,14 @@ import {
   ApiOperation,
   ApiParam,
   ApiProduces,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { StartInstructions } from './process.dto';
 import { Response } from 'express';
 import { Account, ApiKey, ApiPrivilege, AuthApiKey, AuthGuard, AuthUser } from '@/auth';
-import { ActionEvent, Process } from '@letsflow/core/process';
+import { ActionEvent, instantiate, Process } from '@letsflow/core/process';
 import { AuthService } from '@/auth/auth.service';
 import { ScenarioService } from '@/scenario/scenario.service';
 import { Scenario } from '@letsflow/core/scenario';
@@ -91,6 +92,7 @@ export class ProcessController {
 
   @ApiOperation({ summary: 'Get a process by ID' })
   @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
+  @ApiQuery({ name: 'predict', description: 'Predict next states', type: 'boolean' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json')
   @Get('/:id')
@@ -98,6 +100,7 @@ export class ProcessController {
     @Param('id') id: string,
     @AuthUser() user: Account | undefined,
     @AuthApiKey() apiKey: ApiKey | undefined,
+    @Query('predict') addPrediction: boolean | undefined,
     @Res() res: Response,
   ): Promise<void> {
     if (!(await this.processes.has(id))) {
@@ -105,7 +108,7 @@ export class ProcessController {
       return;
     }
 
-    const process = await this.processes.get(id);
+    let process = await this.processes.get(id);
 
     if (apiKey && !this.isAllowedByApiKey(apiKey, process.scenario)) {
       res.status(403).send('Insufficient privileges of API key');
@@ -117,17 +120,22 @@ export class ProcessController {
       return;
     }
 
+    if (addPrediction) {
+      process = this.processes.predict(process);
+    }
+
     res.status(200).json(process);
   }
 
   @ApiOperation({ summary: 'Start a process' })
-  @ApiConsumes('application/json')
+  @ApiQuery({ name: 'predict', description: 'Predict next states', type: 'boolean' })
   @ApiHeader({
     name: 'As-Actor',
     description:
       'Specify actor when multiple actors could have performed the action and actor cannot be determined based on the user',
     required: false,
   })
+  @ApiConsumes('application/json')
   @ApiBody({ required: true, type: StartInstructions })
   @ApiResponse({ status: 201, description: 'Created' })
   @ApiPrivilege('process:start')
@@ -136,6 +144,7 @@ export class ProcessController {
     @Headers('As-Actor') actor: string | undefined,
     @AuthUser() user: Account | undefined,
     @AuthApiKey() apiKey: ApiKey | undefined,
+    @Query('predict') addPrediction: boolean | undefined,
     @Body() instructions: StartInstructions,
     @Res() res: Response,
   ): Promise<void> {
@@ -153,16 +162,19 @@ export class ProcessController {
       return;
     }
 
-    let process = await this.processes.instantiate(scenario);
+    let process = instantiate(scenario);
 
     const { key: action, response } =
       typeof instructions.action === 'object' ? instructions.action : { key: instructions.action, response: undefined };
 
     process = await this.doStep(process, user, action, actor, response, res);
+    if (!process) return;
 
-    if (process) {
-      res.status(201).header('Location', `/processes/${process.id}`).json(process);
+    if (addPrediction) {
+      process = this.processes.predict(process);
     }
+
+    res.status(201).header('Location', `/processes/${process.id}`).json(process);
   }
 
   @ApiOperation({ summary: 'Step through a process' })
@@ -174,8 +186,9 @@ export class ProcessController {
       'Specify actor when multiple actors could have performed the action and actor cannot be determined based on the user',
     required: false,
   })
+  @ApiConsumes('application/json')
   @ApiBody({ required: true })
-  @ApiResponse({ status: 204, description: 'No Content' })
+  @ApiResponse({ status: 200, description: 'Success' })
   @ApiPrivilege('process:step')
   @Post(':id/:action')
   public async step(
@@ -184,6 +197,7 @@ export class ProcessController {
     @Headers('As-Actor') actor: string | undefined,
     @AuthUser() user: Account | undefined,
     @AuthApiKey() apiKey: ApiKey | undefined,
+    @Query('predict') addPrediction: boolean | undefined,
     @Body() body: any,
     @Res() res: Response,
   ): Promise<void> {
@@ -205,10 +219,13 @@ export class ProcessController {
     }
 
     process = await this.doStep(process, user, action, actor, body, res);
+    if (!process) return;
 
-    if (process) {
-      res.status(200).json(process);
+    if (addPrediction) {
+      process = this.processes.predict(process);
     }
+
+    res.status(200).json(process);
   }
 
   private async doStep(

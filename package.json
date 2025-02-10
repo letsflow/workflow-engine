@@ -20,7 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@letsflow/core": "^1.0.3",
+    "@letsflow/core": "^1.0.4",
     "@nestjs/common": "^10.3.9",
     "@nestjs/core": "^10.3.9",
     "@nestjs/event-emitter": "^3.0.0",
@@ -29,6 +29,7 @@
     "@nestjs/swagger": "^7.3.1",
     "ajv": "^8.16.0",
     "amqp-connection-manager": "^4.1.14",
+    "amqplib": "^0.10.5",
     "buffer-crc32": "^1.0.0",
     "convict": "^6.2.4",
     "mongodb": "^6.7.0",
