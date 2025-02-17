@@ -802,20 +802,20 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@letsflow/core@^1.0.3":
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/@letsflow/core/-/core-1.0.3.tgz#3b898adf059203a487b4e2658b4adcd6819bada5"
+"@letsflow/core@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@letsflow/core/-/core-1.1.0.tgz#87535e3c0b5215e2bd78d1c9bffc4a51a996fca4"
   dependencies:
     "@letsflow/jmespath" "^1.1.4-jasny.4"
     "@noble/hashes" "^1.7.1"
     ajv "^8.16.0"
     ajv-formats "^3.0.1"
     fast-json-stable-stringify "^2.1.0"
-    get-value "^3.0.1"
+    get-value "^4.0.1"
     mustache "^4.2.0"
     set-value "^4.1.0"
-    uuid "^10.0.0"
-    yaml "^2.4.5"
+    uuid "^11.0.5"
+    yaml "^2.7.0"
 
 "@letsflow/jmespath@^1.1.4-jasny.4":
   version "1.1.4-jasny.4"
@@ -2675,11 +2675,9 @@ get-stream@^6.0.0:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/get-stream/-/get-stream-6.0.1.tgz#a262d8eef67aced57c2852ad6167526a43cbf7b7"
 
-get-value@^3.0.1:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/get-value/-/get-value-3.0.1.tgz#5efd2a157f1d6a516d7524e124ac52d0a39ef5a8"
-  dependencies:
-    isobject "^3.0.1"
+get-value@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/get-value/-/get-value-4.0.1.tgz#4a1a61eb56db3832ad525f71350355f951815c56"
 
 getpass@^0.1.1:
   version "0.1.7"
@@ -4961,7 +4959,7 @@ yallist@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/yallist/-/yallist-4.0.0.tgz#9bb92790d9c0effec63be73519e11a35019a3a72"
 
-yaml@^2.4.5:
+yaml@^2.7.0:
   version "2.7.0"
   resolved "https://registry.yarnpkg.com/yaml/-/yaml-2.7.0.tgz#aef9bb617a64c937a9a748803786ad8d3ffe1e98"
 
