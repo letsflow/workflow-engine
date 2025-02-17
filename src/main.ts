@@ -29,7 +29,9 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  await swagger(app, config);
+  if (config.get('apiDocs.enabled')) {
+    await swagger(app, config);
+  }
   await app.listen(process.env.PORT || 3000);
 }
 

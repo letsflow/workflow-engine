@@ -19,6 +19,12 @@ export default {
     default: 80,
     env: 'PORT',
   },
+  apiDocs: {
+    enabled: {
+      default: false,
+      env: 'API_DOCS_ENABLED',
+    },
+  },
   log: {
     level: {
       default: '',
@@ -116,5 +122,45 @@ export default {
     doc: 'Dictionary of services and workers',
     format: Object,
     default: {},
+  },
+  decentralized: {
+    enabled: {
+      default: false,
+      env: 'DECENTRALIZED_ENABLED',
+    },
+  },
+  lto: {
+    relay: {
+      default: '',
+      env: 'LTO_RELAY',
+    },
+    node: {
+      url: {
+        default: '',
+        env: 'LTO_NODE',
+      },
+      apiKey: {
+        default: '',
+        env: 'LTO_NODE_API_KEY',
+      },
+    },
+    networkId: {
+      default: 'T',
+      env: 'LTO_NETWORK',
+    },
+    account: {
+      seed: {
+        default: '',
+        env: 'LTO_ACCOUNT_SEED',
+      },
+      keyType: {
+        default: 'ed25519' as 'ed255119' | 'secp256k1',
+        env: 'LTO_ACCOUNT_KEY_TYPE',
+      },
+      nonce: {
+        default: 0,
+        env: 'LTO_ACCOUNT_NONCE',
+      },
+    },
   },
 };

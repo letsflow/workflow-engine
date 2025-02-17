@@ -1,15 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ProcessSummary } from './process.dto';
 import { ScenarioService } from '@/scenario/scenario.service';
 import { Collection, Db } from 'mongodb';
 import { from as bsonUUID, MUUID } from 'uuid-mongodb';
-import { Actor, instantiate, predict, PredictedState, Process, step } from '@letsflow/core/process';
+import { Actor, HashFn, instantiate, predict, PredictedState, Process, step } from '@letsflow/core/process';
 import { ConfigService } from '@/common/config/config.service';
 import { ScenarioDbService } from '@/scenario/scenario-db/scenario-db.service';
 import { ScenarioFsService } from '@/scenario/scenario-fs/scenario-fs.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Account } from '@/auth';
 import { NormalizedScenario } from '@letsflow/core/scenario';
+import Ajv from 'ajv';
 
 type ProcessDocument = Omit<Process, 'id' | 'scenario' | 'actors'> & {
   _id: MUUID;
@@ -49,10 +50,13 @@ export class ProcessService {
   private scenarioSummeryProjection: Record<string, number> = { _id: 1, title: 1, description: 1 };
 
   constructor(
-    private scenarios: ScenarioService,
-    private db: Db,
+    private readonly scenarios: ScenarioService,
+    private readonly db: Db,
     private eventEmitter: EventEmitter2,
-    private config: ConfigService,
+    private readonly config: ConfigService,
+    private readonly ajv: Ajv,
+    @Inject('HASH_FN') private readonly hashFn: HashFn,
+    @Inject('INSTANTIATE_FN') private readonly instantiateFn: typeof instantiate,
   ) {}
 
   onModuleInit() {
@@ -149,12 +153,12 @@ export class ProcessService {
   }
 
   instantiate(scenario: NormalizedScenario): Process {
-    return instantiate(scenario);
+    return this.instantiateFn(scenario, { ajv: this.ajv });
   }
 
   predict(process: Process): Process & { next?: PredictedState[] } {
     try {
-      return { ...process, next: predict(process) };
+      return { ...process, next: predict(process, { ajv: this.ajv }) };
     } catch (error) {
       this.logger.warn(
         `Failed to predict next states of process ${process.id} with scenario ${process.scenario.id}: ${error}`,
@@ -201,7 +205,7 @@ export class ProcessService {
   }
 
   async step(process: Process, action: string, actor: StepActor, response?: any): Promise<Process> {
-    const updatedProcess = step(process, action, actor, response);
+    const updatedProcess = step(process, action, actor, response, { hashFn: this.hashFn, ajv: this.ajv });
     await this.save(updatedProcess);
 
     if (process.current.timestamp.getTime() !== updatedProcess.current.timestamp.getTime()) {

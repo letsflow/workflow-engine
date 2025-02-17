@@ -1,4 +1,7 @@
 {
+  "apiDocs": {
+    "enabled": true
+  },
   "dev": {
     "demoAccounts": true,
     "defaultAccount": "admin"

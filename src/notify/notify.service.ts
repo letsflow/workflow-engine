@@ -19,19 +19,18 @@ export class NotifyService implements NotifyProvider {
     private zeromq: ZeromqService,
   ) {}
 
-  @OnEvent('process.stepped')
+  @OnEvent('process.stepped', { async: true })
   async onStepped(process: Process) {
-    for (const args of process.current.notify) {
-      await this.notify(process, args);
-    }
+    await Promise.all(process.current.notify.map((args) => this.notify(process, args)));
   }
 
-  @OnEvent('process.retry')
+  @OnEvent('process.retry', { async: true })
   async onRetry({ process, services }: { process: Process; services?: string[] }) {
-    for (const args of process.current.notify) {
-      if (!services && !services.includes(args.service)) continue;
-      await this.notify(process, args);
-    }
+    await Promise.all(
+      process.current.notify
+        .filter((args) => !services || services.includes(args.service))
+        .map((args) => this.notify(process, args)),
+    );
   }
 
   async notify(process: Process, args: Notify): Promise<void> {
