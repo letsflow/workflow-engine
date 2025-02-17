@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.2",
-    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/schematics": "^11.0.1",
     "@nestjs/testing": "^10.3.9",
     "@types/buffer-crc32": "^0.2.4",
     "@types/convict": "^6.1.6",
