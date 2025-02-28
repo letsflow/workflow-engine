@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AmqpService } from './ampq.service';
 import { ConfigService } from '@/common/config/config.service';
 import { AmqpConnectionManager, ChannelWrapper } from 'amqp-connection-manager';
-import { Notify, Process } from '@letsflow/core/process';
+import { Process } from '@letsflow/core/process';
 
 describe('AmqpService', () => {
   let service: AmqpService;
@@ -14,7 +14,8 @@ describe('AmqpService', () => {
   const process = {
     id: '00000000-0000-0000-0001-000000000001',
     current: {
-      actions: [{ key: 'next' }],
+      actions: [{ key: 'next', actor: ['service:pushService', 'service:replyService'] }],
+      instructions: { 'service:pushService': 'Go to next' } as Record<string, string>,
     },
     events: [{ hash: '1234' }],
   } as Process;
@@ -119,7 +120,7 @@ describe('AmqpService', () => {
         },
       });
 
-      const args = { service: 'pushService', trigger: 'next' } as Notify;
+      const args = { service: 'pushService', after: 0 };
 
       await service.notify(process, args);
 
@@ -128,7 +129,8 @@ describe('AmqpService', () => {
         'test-key',
         JSON.stringify({
           process: '00000000-0000-0000-0001-000000000001',
-          action: { key: 'next' },
+          actions: [{ key: 'next', actor: ['service:pushService', 'service:replyService'] }],
+          instructions: 'Go to next',
           etag: '1234',
         }),
         {
@@ -161,7 +163,7 @@ describe('AmqpService', () => {
         });
       });
 
-      const args = { service: 'replyService', trigger: 'next' } as Notify;
+      const args = { service: 'replyService', after: 0 };
 
       const result = await service.notify(process, args);
 
@@ -172,7 +174,7 @@ describe('AmqpService', () => {
         '',
         JSON.stringify({
           process: '00000000-0000-0000-0001-000000000001',
-          action: { key: 'next' },
+          actions: [{ key: 'next', actor: ['service:pushService', 'service:replyService'] }],
           etag: '1234',
         }),
         {
@@ -188,7 +190,7 @@ describe('AmqpService', () => {
     });
 
     it('should throw an error if the response timeout is exceeded', async () => {
-      const args = { service: 'replyService', trigger: 'next' } as Notify;
+      const args = { service: 'replyService', after: 0 };
 
       await expect(service.notify(process, args)).rejects.toThrow('Response timeout exceeded');
     });

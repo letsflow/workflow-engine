@@ -11,7 +11,8 @@ describe('WebhookService', () => {
   const process = {
     id: '00000000-0000-0000-0001-000000000001',
     current: {
-      actions: [{ key: 'next' }],
+      actions: [{ key: 'next', actor: ['service:test'] }],
+      instructions: { 'service:test': 'Go to next' } as Record<string, string>,
     },
     events: [{ hash: '1234' }],
   } as Process;
@@ -26,7 +27,7 @@ describe('WebhookService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn(() => ({
-              testService: {
+              test: {
                 url: 'https://example.com/webhook',
                 timeout: 10000,
               },
@@ -59,18 +60,18 @@ describe('WebhookService', () => {
 
     it('should throw an error if the url is missing in settings', async () => {
       jest.spyOn(configService, 'get').mockReturnValueOnce({
-        testService: {},
+        test: {},
       });
 
-      await expect(service.notify(process, { service: 'testService' } as Notify)).rejects.toThrow(
-        "Service 'testService' is missing url setting",
+      await expect(service.notify(process, { service: 'test' } as Notify)).rejects.toThrow(
+        "Service 'test' is missing url setting",
       );
     });
 
     it('should send a message with correct headers and body', async () => {
       fetchMock.mockResolvedValue({ ok: true, status: 202 });
 
-      const args = { service: 'testService', trigger: 'next' } as Notify;
+      const args = { service: 'test', after: 0 };
       const result = await service.notify(process, args);
 
       expect(fetchMock).toHaveBeenCalledWith('https://example.com/webhook', {
@@ -79,7 +80,8 @@ describe('WebhookService', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           process: '00000000-0000-0000-0001-000000000001',
-          action: { key: 'next' },
+          actions: [{ key: 'next', actor: ['service:test'] }],
+          instructions: 'Go to next',
           etag: '1234',
         }),
         signal: expect.any(AbortSignal),
@@ -96,7 +98,7 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Server error'),
       });
 
-      const args = { service: 'testService', trigger: 'next' } as Notify;
+      const args = { service: 'test', after: 0 };
 
       await expect(service.notify(process, args)).rejects.toThrow(
         'Webhook failed with status 500 Internal Server Error: Server error',
@@ -111,7 +113,7 @@ describe('WebhookService', () => {
         text: jest.fn().mockResolvedValue('Success'),
       });
 
-      const args = { service: 'testService', trigger: 'next' } as Notify;
+      const args = { service: 'test', after: 0 };
       const result = await service.notify(process, args);
 
       expect(result).toBe('Success');
@@ -125,7 +127,7 @@ describe('WebhookService', () => {
         json: jest.fn().mockResolvedValue({ success: true }),
       });
 
-      const args = { service: 'testService', trigger: 'next' } as Notify;
+      const args = { service: 'test', after: 0 };
       const result = await service.notify(process, args);
 
       expect(result).toEqual({ success: true });

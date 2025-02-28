@@ -1,8 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { etag, Notify, Process } from '@letsflow/core/process';
+import { createMessage, etag, Notify, Process } from '@letsflow/core/process';
 import { AmqpConnectionManager, ChannelWrapper } from 'amqp-connection-manager';
 import { ConfigService } from '@/common/config/config.service';
-import { createMessage } from '../utils/message';
 import { NotifyProvider } from '../notify-provider.interface';
 
 const DEFAULT_APPID = 'letsflow';
@@ -88,7 +87,7 @@ export class AmqpService implements NotifyProvider, OnModuleDestroy {
     const { url: _, exchange, routingKey, responseTimeout, reply, ...options } = settings;
 
     const channel = await this.getChannel(args.service);
-    const message = args.message ?? createMessage(process, args.trigger);
+    const message = args.message ?? createMessage(process, args.service);
 
     options.appId ??= DEFAULT_APPID;
     options.messageId = etag(process);

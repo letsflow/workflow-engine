@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ZeromqService } from './zeromq.service';
 import { ConfigService } from '@/common/config/config.service';
 import { Push } from 'zeromq';
-import { Notify, Process } from '@letsflow/core/process';
+import { Process } from '@letsflow/core/process';
 
 describe('ZeromqService', () => {
   let service: ZeromqService;
@@ -12,7 +12,8 @@ describe('ZeromqService', () => {
   const process = {
     id: '00000000-0000-0000-0001-000000000001',
     current: {
-      actions: [{ key: 'next' }],
+      actions: [{ key: 'next', actor: ['service:test'] }],
+      instructions: { 'service:test': 'Go to next' } as Record<string, string>,
     },
     events: [{ hash: '1234' }],
   } as Process;
@@ -27,7 +28,7 @@ describe('ZeromqService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn(() => ({
-              testService: { type: 'push' },
+              test: { type: 'push' },
             })),
           },
         },
@@ -49,7 +50,7 @@ describe('ZeromqService', () => {
   describe('onModuleDestroy', () => {
     it('should close all sockets', () => {
       const mockSocket = { close: jest.fn() };
-      service['sockets'].set('testService', mockSocket as any);
+      service['sockets'].set('test', mockSocket as any);
 
       service.onModuleDestroy();
 
@@ -60,9 +61,9 @@ describe('ZeromqService', () => {
   describe('getSocket', () => {
     it('should return an existing socket if it exists', () => {
       const mockSocket = {};
-      service['sockets'].set('testService', mockSocket as any);
+      service['sockets'].set('test', mockSocket as any);
 
-      const result = service.getSocket('testService');
+      const result = service.getSocket('test');
 
       expect(result).toBe(mockSocket);
     });
@@ -71,7 +72,7 @@ describe('ZeromqService', () => {
       const mockPushSocket = new Push();
       createSocket.mockReturnValue(mockPushSocket);
 
-      const result = service.getSocket('testService');
+      const result = service.getSocket('test');
 
       expect(createSocket).toHaveBeenCalledWith({ type: 'push' });
       expect(result).toBe(mockPushSocket);
@@ -89,14 +90,15 @@ describe('ZeromqService', () => {
       const mockPushSocket = { send: jest.fn() };
       createSocket.mockReturnValue(mockPushSocket);
 
-      const args = { service: 'testService', trigger: 'next' } as Notify;
+      const args = { service: 'test', after: 0 };
 
       const result = await service.notify(process, args);
 
       expect(mockPushSocket.send).toHaveBeenCalledWith(
         JSON.stringify({
           process: '00000000-0000-0000-0001-000000000001',
-          action: { key: 'next' },
+          actions: [{ key: 'next', actor: ['service:test'] }],
+          instructions: 'Go to next',
           etag: '1234',
         }),
       );
@@ -108,7 +110,7 @@ describe('ZeromqService', () => {
       const mockPushSocket = { send: jest.fn().mockRejectedValue({ message: 'Test error' }) };
       createSocket.mockReturnValue(mockPushSocket);
 
-      const args = { service: 'testService', trigger: 'next' } as Notify;
+      const args = { service: 'test', after: 0 };
 
       expect(service.notify(process, args)).rejects.toEqual({ message: 'Test error' });
     });
@@ -120,14 +122,15 @@ describe('ZeromqService', () => {
       };
       createSocket.mockReturnValue(mockReplySocket);
 
-      const args = { service: 'testService', trigger: 'next' } as Notify;
+      const args = { service: 'test', after: 0 };
 
       const result = await service.notify(process, args);
 
       expect(mockReplySocket.send).toHaveBeenCalledWith(
         JSON.stringify({
           process: '00000000-0000-0000-0001-000000000001',
-          action: { key: 'next' },
+          actions: [{ key: 'next', actor: ['service:test'] }],
+          instructions: 'Go to next',
           etag: '1234',
         }),
       );
@@ -144,7 +147,7 @@ describe('ZeromqService', () => {
 
       createSocket.mockReturnValue(mockReplySocket);
 
-      const args = { service: 'testService', trigger: 'next' } as Notify;
+      const args = { service: 'test', after: 0 };
 
       expect(service.notify(process, args)).rejects.toEqual({ message: 'Test error' });
     });

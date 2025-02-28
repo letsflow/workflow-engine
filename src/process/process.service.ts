@@ -211,7 +211,10 @@ export class ProcessService {
     const updatedProcess = step(process, action, actor, response);
     await this.save(updatedProcess);
 
-    if (process.current.timestamp.getTime() !== updatedProcess.current.timestamp.getTime()) {
+    if (
+      process.current.key !== updatedProcess.current.key ||
+      process.current.timestamp.getTime() !== updatedProcess.current.timestamp.getTime()
+    ) {
       this.eventEmitter.emit('process.stepped', updatedProcess);
     }
 

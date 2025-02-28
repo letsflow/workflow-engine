@@ -236,7 +236,6 @@ describe('ProcessService', () => {
           description: '',
           title: 'complete',
           key: 'complete',
-          if: true,
           response: {},
         },
       ]);
@@ -424,7 +423,7 @@ describe('ProcessService', () => {
     });
 
     it('should step through a process', async () => {
-      const save = jest.spyOn(service, 'save');
+      const save = jest.spyOn(service, 'save').mockResolvedValue(undefined);
       const process = instantiate(scenario);
 
       const updatedProcess = await service.step(process, 'complete', { key: 'actor' });
