@@ -39,13 +39,7 @@ describe('ApiKeyService', () => {
         description: 'Test description',
         expirationDays: 1,
         privileges: ['process:start', 'process:step'],
-        processes: [
-          {
-            scenario: '43dec73d-7e4c-4f48-aacc-f913ff16e14f',
-            actions: ['complete'],
-            actors: ['admin'],
-          },
-        ],
+        service: 'test',
       };
 
       const insertOne = collection.insertOne.mockResolvedValue({
@@ -71,13 +65,7 @@ describe('ApiKeyService', () => {
       expect(insertedDoc.expiration.toISOString()).toEqual(expiration.toISOString());
 
       expect(insertedDoc).toHaveProperty('privileges', ['process:start', 'process:step']);
-      expect(insertedDoc).toHaveProperty('processes', [
-        {
-          scenario: '43dec73d-7e4c-4f48-aacc-f913ff16e14f',
-          actions: ['complete'],
-          actors: ['admin'],
-        },
-      ]);
+      expect(insertedDoc).toHaveProperty('service', 'test');
     });
   });
 
@@ -121,13 +109,7 @@ describe('ApiKeyService', () => {
         issued: new Date('2023-01-01'),
         expiration: new Date('2024-01-01'),
         privileges: ['process:step'],
-        processes: [
-          {
-            scenario: '43dec73d-7e4c-4f48-aacc-f913ff16e14f',
-            actions: ['complete'],
-            actors: ['admin'],
-          },
-        ],
+        service: 'test',
       });
 
       const apiKey = await service.get('123456789012345678901234');
@@ -143,6 +125,7 @@ describe('ApiKeyService', () => {
       expect(apiKey.issued.toISOString()).toEqual(new Date('2023-01-01').toISOString());
       expect(apiKey.expiration.toISOString()).toEqual(new Date('2024-01-01').toISOString());
       expect(apiKey.privileges).toEqual(['process:step']);
+      expect(apiKey.service).toEqual('test');
     });
   });
 

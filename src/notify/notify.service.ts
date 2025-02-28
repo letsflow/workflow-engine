@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ZeromqService } from './zeromq/zeromq.service';
-import { Notify, Process } from '@letsflow/core/process';
+import { determineTrigger, Notify, Process } from '@letsflow/core/process';
 import { ConfigService } from '@/common/config/config.service';
 import { NotifyProvider } from './notify-provider.interface';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -38,12 +38,22 @@ export class NotifyService implements NotifyProvider {
     try {
       const response = await this.getProvider(args.service).notify(process, args);
 
-      if (args.trigger && typeof response !== 'undefined') {
-        await this.processes.step(process, args.trigger, { key: `service:${args.service}` }, response);
+      if (typeof response !== 'undefined') {
+        await this.step(process, args.service, response);
       }
     } catch (err) {
       this.logger.error(err.message);
     }
+  }
+
+  private async step(process: Process, service: string, response: any): Promise<void> {
+    const action = determineTrigger(process, service, response);
+
+    if (!action) {
+      throw new Error(`Service '${service}' gave a response, but unable to determine which action was executed`);
+    }
+
+    await this.processes.step(process, action, { key: `service:${service}` }, response);
   }
 
   private getProvider(service: string): NotifyProvider {

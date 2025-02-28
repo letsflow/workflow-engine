@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
-import { ListOptions, ProcessService } from './process.service';
+import { ListFilter, ProcessService } from './process.service';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -15,10 +15,9 @@ import {
 import { StartInstructions } from './process.dto';
 import { Response } from 'express';
 import { Account, ApiKey, ApiPrivilege, AuthApiKey, AuthGuard, AuthUser } from '@/auth';
-import { ActionEvent, instantiate, Process } from '@letsflow/core/process';
+import { ActionEvent, Process } from '@letsflow/core/process';
 import { AuthService } from '@/auth/auth.service';
 import { ScenarioService } from '@/scenario/scenario.service';
-import { Scenario } from '@letsflow/core/scenario';
 
 @ApiBearerAuth()
 @ApiTags('process')
@@ -31,25 +30,16 @@ export class ProcessController {
     private auth: AuthService,
   ) {}
 
-  isAllowedByApiKey(
-    apiKey: Pick<ApiKey, 'privileges' | 'processes'>,
-    scenario: Scenario,
-    actor?: string,
-    action?: string,
-  ): boolean {
+  isAllowedByApiKey(apiKey: Pick<ApiKey, 'privileges' | 'service'>, process: Process, actor?: string): boolean {
     if (apiKey.privileges.includes('*') || apiKey.privileges.includes('process:super')) {
       return true;
     }
 
-    return (
-      !apiKey.processes ||
-      apiKey.processes.some(
-        (p) =>
-          (!p.scenario || p.scenario === scenario.id || p.scenario === scenario.name) &&
-          (!actor || !p.actors || p.actors.includes(actor)) &&
-          (!action || !p.actions || p.actions.includes(action)),
-      )
-    );
+    if (actor) {
+      return !apiKey.service || actor !== `service:${apiKey.service}`;
+    }
+
+    return apiKey.service && process.current.actions.some((a) => a.actor.includes(`service:${apiKey.service}`));
   }
 
   @ApiOperation({ summary: 'List processes' })
@@ -64,9 +54,10 @@ export class ProcessController {
   @Get()
   public async list(
     @Query('page') page: number | undefined,
+    @Query('sort') sort: string | undefined,
     @Query('all') all: boolean | undefined,
     @AuthUser() user: Account | undefined,
-    @AuthApiKey() apiKey: Pick<ApiKey, 'processes'> | undefined,
+    @AuthApiKey() apiKey: Pick<ApiKey, 'service'> | undefined,
     @Res() res: Response,
   ): Promise<void> {
     if (all && !this.auth.hasPrivilege(user, 'process:super')) {
@@ -74,19 +65,20 @@ export class ProcessController {
       return;
     }
 
-    const options: ListOptions = {
-      limit: 100,
-      page: page ?? 1,
-    };
+    const filter: ListFilter = {};
 
     if (!all && apiKey) {
-      options.scenarios = (apiKey.processes ?? []).map(({ scenario }) => scenario);
+      if (!apiKey.service) {
+        res.status(403).send('API key is not associated with a service');
+        return;
+      }
+      filter.service = apiKey.service;
     }
     if (!all && user) {
-      options.actors = [{ id: user.id }, ...(user.roles ?? []).map((role) => ({ role }))];
+      filter.actors = [{ id: user.id }, ...(user.roles ?? []).map((role) => ({ role }))];
     }
 
-    const processes = await this.processes.list(options);
+    const processes = await this.processes.list(filter, { limit: 100, page: page ?? 1, sort: sort?.split(',') });
     res.status(200).json(processes);
   }
 
@@ -100,7 +92,7 @@ export class ProcessController {
     @Param('id') id: string,
     @AuthUser() user: Account | undefined,
     @AuthApiKey() apiKey: ApiKey | undefined,
-    @Query('predict') addPrediction: boolean | undefined,
+    @Query('predict') withPrediction: boolean | undefined,
     @Res() res: Response,
   ): Promise<void> {
     if (!(await this.processes.has(id))) {
@@ -110,7 +102,7 @@ export class ProcessController {
 
     let process = await this.processes.get(id);
 
-    if (apiKey && !this.isAllowedByApiKey(apiKey, process.scenario)) {
+    if (apiKey && !this.isAllowedByApiKey(apiKey, process)) {
       res.status(403).send('Insufficient privileges of API key');
       return;
     }
@@ -120,7 +112,7 @@ export class ProcessController {
       return;
     }
 
-    if (addPrediction) {
+    if (withPrediction) {
       process = this.processes.predict(process);
     }
 
@@ -157,17 +149,12 @@ export class ProcessController {
 
     const scenario = await this.scenarios.get(instructions.scenario);
 
-    if (apiKey && !this.isAllowedByApiKey(apiKey, scenario)) {
-      res.status(403).send('Insufficient privileges of API key');
-      return;
-    }
-
-    let process = instantiate(scenario);
+    let process = this.processes.instantiate(scenario);
 
     const { key: action, response } =
       typeof instructions.action === 'object' ? instructions.action : { key: instructions.action, response: undefined };
 
-    process = await this.doStep(process, user, action, actor, response, res);
+    process = await this.doStep(process, user, apiKey, action, actor, response, res);
     if (!process) return;
 
     if (addPrediction) {
@@ -213,12 +200,7 @@ export class ProcessController {
       return;
     }
 
-    if (apiKey && !this.isAllowedByApiKey(apiKey, process.scenario, actor, action)) {
-      res.status(403).send({ error: { message: 'Insufficient privileges of API key' } });
-      return;
-    }
-
-    process = await this.doStep(process, user, action, actor, body, res);
+    process = await this.doStep(process, user, apiKey, action, actor, body, res);
     if (!process) return;
 
     if (addPrediction) {
@@ -230,12 +212,23 @@ export class ProcessController {
 
   private async doStep(
     process: Process,
-    user: Account,
+    user: Account | undefined,
+    apiKey: ApiKey | undefined,
     action: string,
-    actor: string,
+    actor: string | undefined,
     response: any,
     res: Response,
   ): Promise<Process | null> {
+    if (apiKey && !this.isAllowedByApiKey(apiKey, process, actor)) {
+      const message = actor
+        ? `Not allowed to perform as actor '${actor}'`
+        : 'Process not available for this API key in current state';
+      res.status(403).send({ error: { message } });
+      return;
+    }
+
+    if (apiKey && !actor) actor = `service:${apiKey.service}`;
+
     const stepActor = this.processes.determineActor(process, action, actor, user);
 
     if (!stepActor) {

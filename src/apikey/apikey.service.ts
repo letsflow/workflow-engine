@@ -38,8 +38,8 @@ export class ApiKeyService implements OnModuleInit {
         ? new Date(input.expiration)
         : this.determineExpiration(issued, input.expirationDays),
       privileges: input.privileges ?? [],
+      service: input.service,
     };
-    if (input.processes) apiKey.processes = input.processes;
 
     const result = await this.collection.insertOne(apiKey);
 

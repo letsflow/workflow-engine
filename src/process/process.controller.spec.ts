@@ -102,16 +102,14 @@ describe('ProcessController', () => {
     ];
 
     const user = { id: '2', roles: ['admin', 'team', 'assistant'] } as Account;
-    const apiKey = {
-      processes: [{ scenario: 'test' }, { scenario: 'test2', actors: ['system'] }],
-    } as ApiKey;
+    const apiKey = { service: 'system' } as ApiKey;
 
     it('should return a list of processes', async () => {
       jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
-      await controller.list(undefined, undefined, undefined, undefined, mockResponse);
+      await controller.list(undefined, undefined, undefined, undefined, undefined, mockResponse);
 
-      expect(processService.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
+      expect(processService.list).toHaveBeenCalledWith({}, { limit: 100, page: 1 });
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.OK);
       expect(mockResponse.json).toHaveBeenCalledWith(mockProcesses);
     });
@@ -119,35 +117,44 @@ describe('ProcessController', () => {
     it('should return page 2', async () => {
       jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
-      await controller.list(2, undefined, undefined, undefined, mockResponse);
+      await controller.list(2, undefined, undefined, undefined, undefined, mockResponse);
 
-      expect(processService.list).toHaveBeenCalledWith({ limit: 100, page: 2 });
+      expect(processService.list).toHaveBeenCalledWith({}, { limit: 100, page: 2 });
     });
 
     it('should filter processes by actor for user', async () => {
       jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
-      await controller.list(undefined, undefined, user, undefined, mockResponse);
+      await controller.list(undefined, undefined, undefined, user, undefined, mockResponse);
 
-      expect(processService.list).toHaveBeenCalledWith({
-        limit: 100,
-        page: 1,
-        actors: [{ id: '2' }, { role: 'admin' }, { role: 'team' }, { role: 'assistant' }],
-      });
+      expect(processService.list).toHaveBeenCalledWith(
+        { actors: [{ id: '2' }, { role: 'admin' }, { role: 'team' }, { role: 'assistant' }] },
+        { limit: 100, page: 1 },
+      );
     });
 
     it('should not filter processes by actor for admin user requesting all processes', async () => {
       jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
-      await controller.list(undefined, true, user, undefined, mockResponse);
+      await controller.list(undefined, undefined, true, user, undefined, mockResponse);
 
-      expect(processService.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
+      expect(processService.list).toHaveBeenCalledWith({}, { limit: 100, page: 1 });
     });
 
     it('should not allow user with super privileges to list all processes', async () => {
       authService.hasPrivilege.mockReturnValue(false);
 
-      await controller.list(undefined, true, { id: '2', roles: ['team'] } as Account, undefined, mockResponse);
+      await controller.list(
+        undefined,
+        undefined,
+        true,
+        {
+          id: '2',
+          roles: ['team'],
+        } as Account,
+        undefined,
+        mockResponse,
+      );
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
       expect(mockResponse.send).toHaveBeenCalledWith('Not allowed to list all processes');
@@ -159,21 +166,17 @@ describe('ProcessController', () => {
     it('should filter processes by scenario for API key', async () => {
       jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
-      await controller.list(undefined, undefined, undefined, apiKey, mockResponse);
+      await controller.list(undefined, undefined, undefined, undefined, apiKey, mockResponse);
 
-      expect(processService.list).toHaveBeenCalledWith({
-        limit: 100,
-        page: 1,
-        scenarios: ['test', 'test2'],
-      });
+      expect(processService.list).toHaveBeenCalledWith({ service: 'system' }, { limit: 100, page: 1 });
     });
 
     it('should not filter processes for an API key without process limitations', async () => {
       jest.spyOn(processService, 'list').mockResolvedValue(mockProcesses as any);
 
-      await controller.list(undefined, true, undefined, {} as ApiKey, mockResponse);
+      await controller.list(undefined, undefined, true, undefined, {} as ApiKey, mockResponse);
 
-      expect(processService.list).toHaveBeenCalledWith({ limit: 100, page: 1 });
+      expect(processService.list).toHaveBeenCalledWith({}, { limit: 100, page: 1 });
     });
   });
 
@@ -186,6 +189,15 @@ describe('ProcessController', () => {
         client: { id: '3' },
         assistant: { role: 'assistant' },
       },
+      current: {
+        key: 'foo',
+        actions: [
+          {
+            key: 'generate',
+            actor: ['service:system'],
+          },
+        ],
+      },
       created: new Date(),
       lastUpdated: new Date(),
     };
@@ -194,13 +206,13 @@ describe('ProcessController', () => {
       ['admin user', { id: '1', roles: ['admin'], token: '' }, undefined],
       ['user by role', { id: '2', roles: ['assistant'], token: '' }, undefined],
       ['user by id', { id: '3', roles: [], token: '' }, undefined],
-      ['API key', undefined, { privileges: ['process:read'] }],
-      ['API key with scenario', undefined, { privileges: ['process:read'], processes: [{ scenario: 'test' }] }],
+      ['API key of service', undefined, { privileges: ['process:read'], service: 'system' }],
+      ['API key with super privs', undefined, { privileges: ['process:read', 'process:super'] }],
     ])('should return a process for %s', async (_, user, apiKey) => {
       processService.has.mockResolvedValue(true);
       processService.get.mockResolvedValue(mockProcess as any);
 
-      await controller.get('00000000-0000-0000-0001-000000000001', user, apiKey, mockResponse);
+      await controller.get('00000000-0000-0000-0001-000000000001', user, apiKey, false, mockResponse);
 
       expect(processService.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
       expect(processService.get).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
@@ -211,7 +223,7 @@ describe('ProcessController', () => {
     it('should return 404 if process not found', async () => {
       processService.has.mockResolvedValue(false);
 
-      await controller.get('00000000-0000-0000-0001-000000000001', undefined, undefined, mockResponse);
+      await controller.get('00000000-0000-0000-0001-000000000001', undefined, undefined, false, mockResponse);
 
       expect(processService.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
@@ -225,7 +237,7 @@ describe('ProcessController', () => {
       authService.hasPrivilege.mockReturnValue(false);
 
       const user = { id: '99', roles: [], token: '', info: {} };
-      await controller.get('00000000-0000-0000-0001-000000000001', user, undefined, mockResponse);
+      await controller.get('00000000-0000-0000-0001-000000000001', user, undefined, false, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
 
@@ -242,7 +254,7 @@ describe('ProcessController', () => {
 
       const apiKey = { processes: [{ scenario: 'foo' }], privileges: [] };
 
-      await controller.get('00000000-0000-0000-0001-000000000001', undefined, apiKey, mockResponse);
+      await controller.get('00000000-0000-0000-0001-000000000001', undefined, apiKey, false, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
     });
@@ -281,7 +293,7 @@ describe('ProcessController', () => {
       scenarioService.getStatus.mockResolvedValue('available');
       scenarioService.get.mockResolvedValue(scenario);
       processService.determineActor.mockReturnValue(actor);
-      processService.instantiate.mockResolvedValue(process);
+      processService.instantiate.mockReturnValue(process);
     });
 
     it('should start a new process', async () => {
@@ -293,7 +305,7 @@ describe('ProcessController', () => {
       const steppedProcess = step(process, 'init', actor);
       processService.step.mockResolvedValue(steppedProcess);
 
-      await controller.start(undefined, user, undefined, mockInstructions, mockResponse);
+      await controller.start(undefined, user, undefined, false, mockInstructions, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
       expect(mockResponse.header).toHaveBeenCalledWith('Location', `/processes/${process.id}`);
@@ -316,7 +328,7 @@ describe('ProcessController', () => {
       const steppedProcess = step(process, 'init', actor, 'hello');
       processService.step.mockResolvedValue(steppedProcess);
 
-      await controller.start(undefined, user, undefined, mockInstructions, mockResponse);
+      await controller.start(undefined, user, undefined, false, mockInstructions, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
       expect(mockResponse.header).toHaveBeenCalledWith('Location', `/processes/${process.id}`);
@@ -335,7 +347,7 @@ describe('ProcessController', () => {
       const steppedProcess = step(process, 'wrongAction', actor, {});
       processService.step.mockResolvedValue(steppedProcess);
 
-      await controller.start(undefined, user, undefined, mockInstructions, mockResponse);
+      await controller.start(undefined, user, undefined, false, mockInstructions, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({

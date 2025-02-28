@@ -246,11 +246,6 @@ describe('ProcessService', () => {
       const event = process.events[0] as InstantiateEvent;
       expect(event.timestamp).toBeInstanceOf(Date);
       expect(event.timestamp.toISOString()).toEqual(process.current.timestamp.toISOString());
-      expect(event.actors).toEqual({
-        actor: {
-          title: 'actor',
-        },
-      });
       expect(event.scenario).toEqual(scenarioId);
       expect(event.id).toEqual(process.id);
     });

@@ -34,35 +34,13 @@ export class ApiKey {
   revoked?: Date;
 
   @ApiProperty({
-    enum: privileges,
     type: 'array',
-    items: { type: 'string' },
+    items: { type: 'string', enum: privileges as any },
   })
   privileges: Array<Privilege>;
 
-  @ApiProperty({
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        scenario: { type: 'string', format: 'uuid' },
-        actors: {
-          type: 'array',
-          items: { type: 'string' },
-        },
-        actions: {
-          type: 'array',
-          items: { type: 'string' },
-        },
-      },
-      required: ['scenario'],
-    },
-  })
-  processes?: Array<{
-    scenario: string;
-    actors?: string[];
-    actions?: string[];
-  }>;
+  @ApiProperty()
+  service?: string;
 
   isActive(): boolean {
     return !this.revoked && (!this.expiration || this.expiration > new Date());
@@ -83,26 +61,6 @@ export class IssueApiKeyDto {
   })
   privileges: Array<Privilege>;
 
-  @ApiProperty({
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        scenario: { type: 'string', format: 'uuid' },
-        actors: {
-          type: 'array',
-          items: { type: 'string' },
-        },
-        actions: {
-          type: 'array',
-          items: { type: 'string' },
-        },
-      },
-    },
-  })
-  processes?: Array<{
-    scenario: string;
-    actors?: string[];
-    actions?: string[];
-  }>;
+  @ApiProperty()
+  service?: string;
 }

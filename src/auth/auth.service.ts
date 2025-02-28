@@ -116,11 +116,11 @@ export class AuthService implements OnModuleInit {
     };
   }
 
-  async verifyApiKey(token: string): Promise<Pick<ApiKey, 'privileges' | 'processes'> | null> {
+  async verifyApiKey(token: string): Promise<Pick<ApiKey, 'privileges' | 'service'> | null> {
     const doc = await this.apiKeys.findOne(
       { token, expiration: { $gt: new Date() }, revoked: { $exists: false } },
       {
-        projection: { _id: 0, privileges: 1, processes: 1 },
+        projection: { _id: 0, privileges: 1, service: 1 },
       },
     );
 

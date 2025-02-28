@@ -10,6 +10,7 @@ import { ScenarioFsService } from '@/scenario/scenario-fs/scenario-fs.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Account } from '@/auth';
 import { NormalizedScenario } from '@letsflow/core/scenario';
+import { clean } from '@/common/utils/clean';
 
 type ProcessDocument = Omit<Process, 'id' | 'scenario' | 'actors'> & {
   _id: MUUID;
@@ -17,9 +18,12 @@ type ProcessDocument = Omit<Process, 'id' | 'scenario' | 'actors'> & {
   actors: Array<Actor & { _key: string }>;
 };
 
-export interface ListOptions {
-  scenarios?: string[];
+export interface ListFilter {
+  service?: string;
   actors?: Array<{ id: string } | { role: string }>;
+}
+
+export interface ListOptions {
   sort?: string[];
   page?: number;
   limit?: number;
@@ -68,12 +72,11 @@ export class ProcessService {
     this.collection = this.db.collection<ProcessDocument>('processes');
   }
 
-  async list({ scenarios, actors, sort, page, limit }: ListOptions = {}): Promise<ProcessSummary[]> {
+  async list({ service, actors }: ListFilter = {}, { sort, page, limit }: ListOptions = {}): Promise<ProcessSummary[]> {
     const stages = [];
 
-    if (scenarios) {
-      const scenarioIds = await this.scenarios.getIds(scenarios);
-      stages.push({ $match: { scenario: { $in: scenarioIds.map(bsonUUID) } } });
+    if (service) {
+      stages.push({ $match: { 'current.actions.actors': `service:${service}` } });
     }
 
     if (actors) {
@@ -116,7 +119,11 @@ export class ProcessService {
           },
         },
         { $project: { ...this.summeryProjection } },
-        { $sort: Object.fromEntries((sort ?? ['title']).map((key) => [key, 1])) },
+        {
+          $sort: Object.fromEntries(
+            (sort ?? ['title']).map((key) => (key.startsWith('-') ? [key.slice(1), -1] : [key, 1])),
+          ),
+        },
         { $skip: (page ?? 0) * (limit ?? 0) },
         { $limit: limit ?? 0 },
       ])
@@ -235,9 +242,8 @@ export class ProcessService {
   }
 
   determineActor(process: Process, action: string, actor?: string, user?: Account): StepActor | null {
-    if (actor) {
-      // TODO; check if actor is allowed to perform action
-      return { ...(user?.info ?? {}), id: user?.id, roles: user?.roles, key: actor };
+    if (actor && !user) {
+      return clean({ ...(user?.info ?? {}), id: user?.id, roles: user?.roles, key: actor });
     }
 
     const processAction = process.current.actions.find((a) => a.key === action);
@@ -254,6 +260,6 @@ export class ProcessService {
 
     const foundActor: string = processAction.actor.find((actor: string) => possibleActors.includes(actor));
 
-    return foundActor ? { ...(user?.info ?? {}), id: user?.id, roles: user?.roles, key: foundActor } : null;
+    return foundActor ? clean({ ...(user?.info ?? {}), id: user?.id, roles: user?.roles, key: foundActor }) : null;
   }
 }

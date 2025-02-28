@@ -1398,9 +1398,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@letsflow/core@npm:^1.0.4":
-  version: 1.2.3
-  resolution: "@letsflow/core@npm:1.2.3"
+"@letsflow/core@npm:^1.2.4":
+  version: 1.2.4
+  resolution: "@letsflow/core@npm:1.2.4"
   dependencies:
     "@letsflow/jmespath": ^1.1.4-jasny.4
     "@noble/hashes": ^1.7.1
@@ -1412,7 +1412,7 @@ __metadata:
     set-value: ^4.1.0
     uuid: ^11.1.0
     yaml: ^2.7.0
-  checksum: 5b8ca3ad98d882406a22794243f0ef1f13b940f88205b220a97ce15c90c63d2b3a57cb0a4d85635d80baa1acf01636c3818f3b99547b04d8e27111d7c6ed7777
+  checksum: a04288eb066222dc065f741bd13017e2a325868de7f4b264578bf5a52886b4e28c1958a52832d40d34bf10a2d1796ef6109bb9b9ee4afc4114d6a9bfb92d9c90
   languageName: node
   linkType: hard
 
@@ -1420,7 +1420,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@letsflow/engine@workspace:."
   dependencies:
-    "@letsflow/core": ^1.0.4
+    "@letsflow/core": ^1.2.4
     "@nestjs/cli": ^11.0.4
     "@nestjs/common": ^10.3.9
     "@nestjs/core": ^10.3.9
