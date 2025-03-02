@@ -96,9 +96,10 @@ describe('ZeromqService', () => {
 
       expect(mockPushSocket.send).toHaveBeenCalledWith(
         JSON.stringify({
-          process: '00000000-0000-0000-0001-000000000001',
           actions: [{ key: 'next', actor: ['service:test'] }],
           instructions: 'Go to next',
+          processId: '00000000-0000-0000-0001-000000000001',
+          service: 'test',
           etag: '1234',
         }),
       );
@@ -128,9 +129,10 @@ describe('ZeromqService', () => {
 
       expect(mockReplySocket.send).toHaveBeenCalledWith(
         JSON.stringify({
-          process: '00000000-0000-0000-0001-000000000001',
           actions: [{ key: 'next', actor: ['service:test'] }],
           instructions: 'Go to next',
+          processId: '00000000-0000-0000-0001-000000000001',
+          service: 'test',
           etag: '1234',
         }),
       );

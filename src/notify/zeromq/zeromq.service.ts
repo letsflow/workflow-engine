@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
-import { createMessage, Notify, Process } from '@letsflow/core/process';
+import { createMessage, etag, Notify, Process } from '@letsflow/core/process';
 import { Push, Reply, SocketOptions } from 'zeromq';
 import { ConfigService } from '@/common/config/config.service';
 import { NotifyProvider } from '../notify-provider.interface';
@@ -41,7 +41,12 @@ export class ZeromqService implements NotifyProvider, OnModuleDestroy {
 
   async notify(process: Process, args: Notify): Promise<any> {
     const socket = this.getSocket(args.service);
-    const message = args.message ?? createMessage(process, args.service);
+    const message = args.message ?? {
+      ...createMessage(process, args.service),
+      processId: process.id,
+      service: args.service,
+      etag: etag(process),
+    };
 
     await socket.send(typeof message === 'string' ? message : JSON.stringify(message));
 
