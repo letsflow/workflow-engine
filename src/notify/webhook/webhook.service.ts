@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@/common/config/config.service';
-import { createMessage, Notify, Process } from '@letsflow/core/process';
+import { createMessage, etag, Notify, Process } from '@letsflow/core/process';
 import { NotifyProvider } from '@/notify/notify-provider.interface';
 
 interface WebhookSettings extends RequestInit {
   url: string;
   timeout?: number;
+  headers?: Record<string, string>;
 }
 
 type FetchFunction = typeof fetch;
@@ -28,11 +29,17 @@ export class WebhookService implements NotifyProvider {
     }
 
     const message = args.message ?? createMessage(process, args.service);
-    settings.headers ??= {};
-    settings.headers['Content-Type'] ??= typeof message === 'string' ? 'text/plain' : 'application/json';
+    const headers = {
+      ...settings.headers,
+      'Content-Type': typeof message === 'string' ? 'text/plain' : 'application/json',
+      'Letsflow-Process': process.id,
+      'Letsflow-Service': args.service,
+      Etag: etag(process),
+    };
 
     const response = await this.fetch(settings.url, {
-      ...settings,
+      method: 'POST',
+      headers,
       body: typeof message === 'string' ? message : JSON.stringify(message),
       signal: AbortSignal.timeout(settings.timeout ?? 30000),
     });

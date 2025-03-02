@@ -75,15 +75,38 @@ describe('WebhookService', () => {
       const result = await service.notify(process, args);
 
       expect(fetchMock).toHaveBeenCalledWith('https://example.com/webhook', {
-        url: 'https://example.com/webhook',
-        timeout: 10000,
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Letsflow-Process': '00000000-0000-0000-0001-000000000001',
+          'Letsflow-Service': 'test',
+          Etag: '1234',
+        },
         body: JSON.stringify({
-          process: '00000000-0000-0000-0001-000000000001',
           actions: [{ key: 'next', actor: ['service:test'] }],
           instructions: 'Go to next',
-          etag: '1234',
         }),
+        signal: expect.any(AbortSignal),
+      });
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should send a custom message with correct headers and body', async () => {
+      fetchMock.mockResolvedValue({ ok: true, status: 202 });
+
+      const args = { service: 'test', after: 0, message: { custom: 'message' } };
+      const result = await service.notify(process, args);
+
+      expect(fetchMock).toHaveBeenCalledWith('https://example.com/webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Letsflow-Process': '00000000-0000-0000-0001-000000000001',
+          'Letsflow-Service': 'test',
+          Etag: '1234',
+        },
+        body: JSON.stringify({ custom: 'message' }),
         signal: expect.any(AbortSignal),
       });
 
