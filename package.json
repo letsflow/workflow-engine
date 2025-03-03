@@ -41,7 +41,7 @@
     "zeromq": "^6.0.0-beta.20"
   },
   "devDependencies": {
-    "@nestjs/cli": "^11.0.4",
+    "@nestjs/cli": "^11.0.5",
     "@nestjs/schematics": "^11.0.1",
     "@nestjs/testing": "^10.3.9",
     "@types/buffer-crc32": "^0.2.4",
