@@ -84,7 +84,8 @@ export class ProcessController {
 
   @ApiOperation({ summary: 'Get a process by ID' })
   @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
-  @ApiQuery({ name: 'predict', description: 'Predict next states', type: 'boolean' })
+  @ApiQuery({ name: 'events', description: 'Return the process events', type: 'boolean' })
+  @ApiQuery({ name: 'prediction', description: 'Predict next states', type: 'boolean' })
   @ApiResponse({ status: 200, description: 'Success' })
   @ApiProduces('application/json')
   @Get('/:id')
@@ -92,7 +93,8 @@ export class ProcessController {
     @Param('id') id: string,
     @AuthUser() user: Account | undefined,
     @AuthApiKey() apiKey: ApiKey | undefined,
-    @Query('predict') withPrediction: boolean | undefined,
+    @Query('events') withEvents: boolean | undefined,
+    @Query('prediction') withPrediction: boolean | undefined,
     @Res() res: Response,
   ): Promise<void> {
     if (!(await this.processes.has(id))) {
@@ -115,12 +117,16 @@ export class ProcessController {
     if (withPrediction) {
       process = this.processes.predict(process);
     }
+    if (!withEvents) {
+      delete process.events;
+    }
 
     res.status(200).json(process);
   }
 
   @ApiOperation({ summary: 'Start a process' })
-  @ApiQuery({ name: 'predict', description: 'Predict next states', type: 'boolean' })
+  @ApiQuery({ name: 'events', description: 'Return the process events', type: 'boolean' })
+  @ApiQuery({ name: 'prediction', description: 'Predict next states', type: 'boolean' })
   @ApiHeader({
     name: 'As-Actor',
     description:
@@ -136,7 +142,8 @@ export class ProcessController {
     @Headers('As-Actor') actor: string | undefined,
     @AuthUser() user: Account | undefined,
     @AuthApiKey() apiKey: ApiKey | undefined,
-    @Query('predict') addPrediction: boolean | undefined,
+    @Query('events') withEvents: boolean | undefined,
+    @Query('prediction') withPrediction: boolean | undefined,
     @Body() instructions: StartInstructions,
     @Res() res: Response,
   ): Promise<void> {
@@ -157,8 +164,11 @@ export class ProcessController {
     process = await this.doStep(process, user, apiKey, action, actor, response, res);
     if (!process) return;
 
-    if (addPrediction) {
+    if (withPrediction) {
       process = this.processes.predict(process);
+    }
+    if (!withEvents) {
+      delete process.events;
     }
 
     res.status(201).header('Location', `/processes/${process.id}`).json(process);
@@ -167,6 +177,8 @@ export class ProcessController {
   @ApiOperation({ summary: 'Step through a process' })
   @ApiParam({ name: 'id', description: 'Process ID', format: 'uuid' })
   @ApiParam({ name: 'action', description: 'Process action' })
+  @ApiQuery({ name: 'events', description: 'Return the process events', type: 'boolean' })
+  @ApiQuery({ name: 'prediction', description: 'Predict next states', type: 'boolean' })
   @ApiHeader({
     name: 'As-Actor',
     description:
@@ -184,7 +196,8 @@ export class ProcessController {
     @Headers('As-Actor') actor: string | undefined,
     @AuthUser() user: Account | undefined,
     @AuthApiKey() apiKey: ApiKey | undefined,
-    @Query('predict') addPrediction: boolean | undefined,
+    @Query('events') withEvents: boolean | undefined,
+    @Query('prediction') withPrediction: boolean | undefined,
     @Body() body: any,
     @Res() res: Response,
   ): Promise<void> {
@@ -203,8 +216,11 @@ export class ProcessController {
     process = await this.doStep(process, user, apiKey, action, actor, body, res);
     if (!process) return;
 
-    if (addPrediction) {
+    if (withPrediction) {
       process = this.processes.predict(process);
+    }
+    if (!withEvents) {
+      delete process.events;
     }
 
     res.status(200).json(process);

@@ -156,7 +156,9 @@ export class ProcessService {
   }
 
   instantiate(scenario: NormalizedScenario): Process {
-    return instantiate(scenario);
+    const process = instantiate(scenario);
+    this.eventEmitter.emit('process.instantiated', process);
+    return process;
   }
 
   predict(process: Process): Process & { next?: PredictedState[] } {
