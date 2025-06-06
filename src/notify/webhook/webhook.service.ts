@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@/common/config/config.service';
-import { createMessage, Notify, Process } from '@letsflow/core/process';
+import { createMessage, etag, Notify, Process } from '@letsflow/core/process';
 import { NotifyProvider } from '@/notify/notify-provider.interface';
 
 interface WebhookSettings extends RequestInit {
@@ -27,7 +27,12 @@ export class WebhookService implements NotifyProvider {
       throw new Error(`Service '${args.service}' is missing url setting`);
     }
 
-    const message = args.message ?? createMessage(process, args.service);
+    const message =
+      args.message ?? {
+        process: process.id,
+        ...createMessage(process, args.service),
+        etag: etag(process),
+      };
     settings.headers ??= {};
     settings.headers['Content-Type'] ??= typeof message === 'string' ? 'text/plain' : 'application/json';
 

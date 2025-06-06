@@ -231,7 +231,6 @@ describe('ProcessService', () => {
       expect(process.current.key).toEqual('initial');
       expect(process.current.actions).toEqual([
         {
-          $schema: 'https://schemas.letsflow.io/v1.0/action',
           actor: ['actor'],
           description: '',
           title: 'complete',
@@ -307,7 +306,6 @@ describe('ProcessService', () => {
           key: 'initial',
           actions: {
             complete: {
-              $schema: 'https://schemas.letsflow.io/v1.0/action',
               actor: ['actor'],
               description: '',
               title: 'complete',
@@ -355,7 +353,6 @@ describe('ProcessService', () => {
         key: 'initial',
         actions: {
           complete: {
-            $schema: 'https://schemas.letsflow.io/v1.0/action',
             actor: ['actor'],
             description: '',
             title: 'complete',
