@@ -29,7 +29,7 @@ export class NotifyService implements NotifyProvider {
   @OnEvent('process.retry')
   async onRetry({ process, services }: { process: Process; services?: string[] }) {
     for (const args of process.current.notify) {
-      if (!services && !services.includes(args.service)) continue;
+      if (services && !services.includes(args.service)) continue;
       await this.notify(process, args);
     }
   }

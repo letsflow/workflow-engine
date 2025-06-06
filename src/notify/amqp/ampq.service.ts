@@ -87,7 +87,12 @@ export class AmqpService implements NotifyProvider, OnModuleDestroy {
     const { url: _, exchange, routingKey, responseTimeout, reply, ...options } = settings;
 
     const channel = await this.getChannel(args.service);
-    const message = args.message ?? createMessage(process, args.service);
+    const message =
+      args.message ?? {
+        process: process.id,
+        ...createMessage(process, args.service),
+        etag: etag(process),
+      };
 
     options.appId ??= DEFAULT_APPID;
     options.messageId = etag(process);

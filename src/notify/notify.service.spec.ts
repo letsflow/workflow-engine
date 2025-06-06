@@ -59,4 +59,27 @@ describe('NotifyService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
+  describe('onRetry', () => {
+    const process = { current: { notify: [{ service: 'a' }, { service: 'b' }] } } as any;
+
+    it('should notify all services if no list provided', async () => {
+      const notifySpy = jest.spyOn(service as any, 'notify').mockResolvedValue(undefined);
+
+      await service.onRetry({ process });
+
+      expect(notifySpy).toHaveBeenCalledTimes(2);
+      expect(notifySpy).toHaveBeenCalledWith(process, { service: 'a' });
+      expect(notifySpy).toHaveBeenCalledWith(process, { service: 'b' });
+    });
+
+    it('should notify only listed services', async () => {
+      const notifySpy = jest.spyOn(service as any, 'notify').mockResolvedValue(undefined);
+
+      await service.onRetry({ process, services: ['b'] });
+
+      expect(notifySpy).toHaveBeenCalledTimes(1);
+      expect(notifySpy).toHaveBeenCalledWith(process, { service: 'b' });
+    });
+  });
 });
