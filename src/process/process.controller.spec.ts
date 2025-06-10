@@ -212,7 +212,7 @@ describe('ProcessController', () => {
       processService.has.mockResolvedValue(true);
       processService.get.mockResolvedValue(mockProcess as any);
 
-      await controller.get('00000000-0000-0000-0001-000000000001', user, apiKey, false, mockResponse);
+      await controller.get('00000000-0000-0000-0001-000000000001', user, apiKey, false, false, mockResponse);
 
       expect(processService.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
       expect(processService.get).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
@@ -223,7 +223,7 @@ describe('ProcessController', () => {
     it('should return 404 if process not found', async () => {
       processService.has.mockResolvedValue(false);
 
-      await controller.get('00000000-0000-0000-0001-000000000001', undefined, undefined, false, mockResponse);
+      await controller.get('00000000-0000-0000-0001-000000000001', undefined, undefined, false, false, mockResponse);
 
       expect(processService.has).toHaveBeenCalledWith('00000000-0000-0000-0001-000000000001');
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
@@ -237,7 +237,7 @@ describe('ProcessController', () => {
       authService.hasPrivilege.mockReturnValue(false);
 
       const user = { id: '99', roles: [], token: '', info: {} };
-      await controller.get('00000000-0000-0000-0001-000000000001', user, undefined, false, mockResponse);
+      await controller.get('00000000-0000-0000-0001-000000000001', user, undefined, false, false, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
 
@@ -254,7 +254,7 @@ describe('ProcessController', () => {
 
       const apiKey = { processes: [{ scenario: 'foo' }], privileges: [] };
 
-      await controller.get('00000000-0000-0000-0001-000000000001', undefined, apiKey, false, mockResponse);
+      await controller.get('00000000-0000-0000-0001-000000000001', undefined, apiKey, false, false, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
     });
@@ -305,7 +305,7 @@ describe('ProcessController', () => {
       const steppedProcess = step(process, 'init', actor);
       processService.step.mockResolvedValue(steppedProcess);
 
-      await controller.start(undefined, user, undefined, false, mockInstructions, mockResponse);
+      await controller.start(undefined, user, undefined, false, false, mockInstructions, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
       expect(mockResponse.header).toHaveBeenCalledWith('Location', `/processes/${process.id}`);
@@ -328,7 +328,7 @@ describe('ProcessController', () => {
       const steppedProcess = step(process, 'init', actor, 'hello');
       processService.step.mockResolvedValue(steppedProcess);
 
-      await controller.start(undefined, user, undefined, false, mockInstructions, mockResponse);
+      await controller.start(undefined, user, undefined, false, false, mockInstructions, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
       expect(mockResponse.header).toHaveBeenCalledWith('Location', `/processes/${process.id}`);
@@ -347,7 +347,7 @@ describe('ProcessController', () => {
       const steppedProcess = step(process, 'wrongAction', actor, {});
       processService.step.mockResolvedValue(steppedProcess);
 
-      await controller.start(undefined, user, undefined, false, mockInstructions, mockResponse);
+      await controller.start(undefined, user, undefined, false, false, mockInstructions, mockResponse);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({
