@@ -584,6 +584,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@babel/code-frame@npm:^7.16.0":
+  version: 7.27.1
+  resolution: "@babel/code-frame@npm:7.27.1"
+  dependencies:
+    "@babel/helper-validator-identifier": ^7.27.1
+    js-tokens: ^4.0.0
+    picocolors: ^1.1.1
+  checksum: 5874edc5d37406c4a0bb14cf79c8e51ad412fb0423d176775ac14fc0259831be1bf95bdda9c2aa651126990505e09a9f0ed85deaa99893bc316d2682c5115bdc
+  languageName: node
+  linkType: hard
+
 "@babel/compat-data@npm:^7.26.5":
   version: 7.26.5
   resolution: "@babel/compat-data@npm:7.26.5"
@@ -681,6 +692,13 @@ __metadata:
   version: 7.25.9
   resolution: "@babel/helper-validator-identifier@npm:7.25.9"
   checksum: 5b85918cb1a92a7f3f508ea02699e8d2422fe17ea8e82acd445006c0ef7520fbf48e3dbcdaf7b0a1d571fc3a2715a29719e5226636cb6042e15fe6ed2a590944
+  languageName: node
+  linkType: hard
+
+"@babel/helper-validator-identifier@npm:^7.27.1":
+  version: 7.27.1
+  resolution: "@babel/helper-validator-identifier@npm:7.27.1"
+  checksum: 3c7e8391e59d6c85baeefe9afb86432f2ab821c6232b00ea9082a51d3e7e95a2f3fb083d74dc1f49ac82cf238e1d2295dafcb001f7b0fab479f3f56af5eaaa47
   languageName: node
   linkType: hard
 
@@ -1093,6 +1111,13 @@ __metadata:
   version: 1.0.1
   resolution: "@humanwhocodes/module-importer@npm:1.0.1"
   checksum: 0fd22007db8034a2cdf2c764b140d37d9020bbfce8a49d3ec5c05290e77d4b0263b1b972b752df8c89e5eaa94073408f2b7d977aed131faf6cf396ebb5d7fb61
+  languageName: node
+  linkType: hard
+
+"@humanwhocodes/momoa@npm:^2.0.2":
+  version: 2.0.4
+  resolution: "@humanwhocodes/momoa@npm:2.0.4"
+  checksum: ce4680e7f32394b54b29266b0059abbd8de8a980e486f10135c52f2a64359263e50548f9fb6956b1c2e8a47478e6dd4d3ede50bf68bdf1ec1bcc6e61e02d8238
   languageName: node
   linkType: hard
 
@@ -1873,21 +1898,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@letsflow/core@npm:^1.2.6":
-  version: 1.2.6
-  resolution: "@letsflow/core@npm:1.2.6"
+"@letsflow/core@npm:^1.5.0":
+  version: 1.5.0
+  resolution: "@letsflow/core@npm:1.5.0"
   dependencies:
-    "@letsflow/jmespath": ^1.1.4-jasny.4
+    "@letsflow/jmespath": ^1.1.5-jasny.1
     "@noble/hashes": ^1.7.1
     ajv: ^8.17.1
+    ajv-errors: ^3.0.0
     ajv-formats: ^3.0.1
+    better-ajv-errors: ^1.2.0
     fast-json-stable-stringify: ^2.1.0
     get-value: ^4.0.1
     mustache: ^4.2.0
     set-value: ^4.1.0
     uuid: ^11.1.0
     yaml: ^2.7.0
-  checksum: 1e0fed4a322faf99f51435469d7b8995d3b2f9c1ccbe29ac454ed317c65b8b3d1e035f02e1b31a3e73a971f70f63307790afaa75be50013648d5d5fbd719b491
+  checksum: 9adb6bd54da68cd1d64feee9160ff66730f31d412cab0acf70cbbb528dd03e60aea9155b7e781cdeec4da74def4d9da93321884e8a3d4486350794b1f552aac6
   languageName: node
   linkType: hard
 
@@ -1896,7 +1923,7 @@ __metadata:
   resolution: "@letsflow/engine@workspace:."
   dependencies:
     "@aws-sdk/client-sqs": ^3.758.0
-    "@letsflow/core": ^1.2.6
+    "@letsflow/core": ^1.5.0
     "@nestjs/cli": ^11.0.4
     "@nestjs/common": ^10.3.9
     "@nestjs/core": ^10.3.9
@@ -1943,13 +1970,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@letsflow/jmespath@npm:^1.1.4-jasny.4":
-  version: 1.1.4-jasny.4
-  resolution: "@letsflow/jmespath@npm:1.1.4-jasny.4"
+"@letsflow/jmespath@npm:^1.1.5-jasny.1":
+  version: 1.1.5-jasny.1
+  resolution: "@letsflow/jmespath@npm:1.1.5-jasny.1"
   dependencies:
     "@noble/hashes": ^1.7.1
     uuid: ^11.0.5
-  checksum: 1280c321ebffac0849f42978e89d15c7ed75ae16c1490f226a44b8d01283c742aa81ff107bb3c07490f385670287394228f202bb3e2981d67099751f7187aea2
+  checksum: dcf1e8227ebbf0807fc020951ce1070ec3ac1a1d2074e6efb3f835796ec87671270426bca140cfdff86b0efd8fbed15521a2e4ff1b86f4606ba2038a38726445
   languageName: node
   linkType: hard
 
@@ -3475,6 +3502,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ajv-errors@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "ajv-errors@npm:3.0.0"
+  peerDependencies:
+    ajv: ^8.0.1
+  checksum: f3d1610a104fa776c2f90534acbe2113842a40d5ee446062da9e956ae6de6959afc997da1e3948c47316faa225255fc2d9d97aacd0803f47998fb38156d3d03c
+  languageName: node
+  linkType: hard
+
 "ajv-formats@npm:3.0.1, ajv-formats@npm:^3.0.1":
   version: 3.0.1
   resolution: "ajv-formats@npm:3.0.1"
@@ -3857,6 +3893,21 @@ __metadata:
   dependencies:
     tweetnacl: ^0.14.3
   checksum: 4edfc9fe7d07019609ccf797a2af28351736e9d012c8402a07120c4453a3b789a15f2ee1530dc49eee8f7eb9379331a8dd4b3766042b9e502f74a68e7f662291
+  languageName: node
+  linkType: hard
+
+"better-ajv-errors@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "better-ajv-errors@npm:1.2.0"
+  dependencies:
+    "@babel/code-frame": ^7.16.0
+    "@humanwhocodes/momoa": ^2.0.2
+    chalk: ^4.1.2
+    jsonpointer: ^5.0.0
+    leven: ^3.1.0 < 4
+  peerDependencies:
+    ajv: 4.11.8 - 8
+  checksum: 8a1caeac5ec38a5fb66938959ab9cc6746e20529dab3919e5d9c842e99638cf8ea572883e6cb662dcfb058a349cf8c7952c0497fd2f996af9d25f4cb89ccb14a
   languageName: node
   linkType: hard
 
@@ -6704,6 +6755,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jsonpointer@npm:^5.0.0":
+  version: 5.0.1
+  resolution: "jsonpointer@npm:5.0.1"
+  checksum: 0b40f712900ad0c846681ea2db23b6684b9d5eedf55807b4708c656f5894b63507d0e28ae10aa1bddbea551241035afe62b6df0800fc94c2e2806a7f3adecd7c
+  languageName: node
+  linkType: hard
+
 "jsonwebtoken@npm:9.0.2":
   version: 9.0.2
   resolution: "jsonwebtoken@npm:9.0.2"
@@ -6771,7 +6829,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"leven@npm:^3.1.0":
+"leven@npm:^3.1.0, leven@npm:^3.1.0 < 4":
   version: 3.1.0
   resolution: "leven@npm:3.1.0"
   checksum: 638401d534585261b6003db9d99afd244dfe82d75ddb6db5c0df412842d5ab30b2ef18de471aaec70fe69a46f17b4ae3c7f01d8a4e6580ef7adb9f4273ad1e55
