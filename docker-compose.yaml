@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  engine:
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+    environment:
+      - DB=mongodb://mongo:27017/letsflow
+    volumes:
+      - ./scenarios:/app/scenarios:ro
+      - ./schemas:/app/schemas:ro
+
+volumes:
+  mongo-data:
+

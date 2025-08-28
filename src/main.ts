@@ -4,10 +4,12 @@ import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from './common/config/config.service';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import * as path from 'path';
+import * as fs from 'fs';
 
 async function swagger(app: INestApplication, config: ConfigService) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { description, version } = require('../package.json');
+  const packagePath = path.join(process.cwd(), 'package.json');
+  const { description, version } = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
 
   const options = new DocumentBuilder()
     .setTitle('LetsFlow')
