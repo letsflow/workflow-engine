@@ -1,3 +1,5 @@
+# ⚠️ LetsFlow is continuing as library. Use `@letsflow/core` directly in your project.
+
 ![letsflow](https://github.com/letsflow/workflow-engine/assets/100821/3852a14e-90f8-4f8f-a334-09516f43bbc1)
 
 LetsFlow is a workflow engine for running processes, described in YAML or JSON.
